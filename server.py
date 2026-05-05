@@ -60,16 +60,6 @@ SELECT TOP 10
 FROM dbo.gold_ecomm_orders
 ORDER BY Ingestion_Timestamp DESC;
 """,
-    "quarantine_ecomm_orders": """
-SET NOCOUNT ON;
-SELECT TOP 10
-  Order_ID,
-  Price,
-  Error_Reason,
-  Quarantine_Timestamp
-FROM dbo.quarantine_ecomm_orders
-ORDER BY Quarantine_Timestamp DESC;
-""",
 }
 
 
@@ -308,8 +298,38 @@ ORDER BY Check_Timestamp DESC;
     )
 
 
-def get_quarantine_ecomm_orders():
-    return run_sql_query(SILVER_SQL_DATABASE, SILVER_SQL_ENDPOINT_ID, SQL_QUERIES["quarantine_ecomm_orders"])
+def safe_int(value, default):
+    try:
+        parsed = int(value)
+        return parsed if parsed > 0 else default
+    except Exception:
+        return default
+
+
+def get_quarantine_ecomm_orders(since="", limit=10, active_only=True):
+    where_parts = []
+    params = []
+    if since:
+        where_parts.append("Quarantine_Timestamp >= ?")
+        params.append(since)
+    if active_only:
+        where_parts.append("(Is_Repaired IS NULL OR Is_Repaired = 0)")
+
+    where_clause = ("WHERE " + " AND ".join(where_parts)) if where_parts else ""
+    query = f"""
+SET NOCOUNT ON;
+SELECT TOP {safe_int(limit, 10)}
+  Order_ID,
+  Price,
+  Error_Reason,
+  Quarantine_Timestamp,
+  Is_Repaired,
+  Repaired_Timestamp
+FROM dbo.quarantine_ecomm_orders
+{where_clause}
+ORDER BY Quarantine_Timestamp DESC;
+"""
+    return run_sql_query(SILVER_SQL_DATABASE, SILVER_SQL_ENDPOINT_ID, query, params)
 
 
 def write_json(handler, status, body):
@@ -394,7 +414,11 @@ class DemoHandler(SimpleHTTPRequestHandler):
 
         if parsed.path == "/api/quarantine-ecomm-orders":
             try:
-                rows = get_quarantine_ecomm_orders()
+                params = urllib.parse.parse_qs(parsed.query)
+                since = params.get("since", [""])[0]
+                limit = safe_int(params.get("limit", ["10"])[0], 10)
+                active_only = params.get("activeOnly", ["true"])[0].lower() != "false"
+                rows = get_quarantine_ecomm_orders(since=since, limit=limit, active_only=active_only)
                 write_json(self, 200, {"ok": True, "rows": rows})
             except Exception as error:
                 write_json(self, 500, {"ok": False, "error": str(error)})
