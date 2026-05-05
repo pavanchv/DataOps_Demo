@@ -274,7 +274,7 @@ html,body{min-height:100%;background:var(--color-page-bg)}
 </div>
 
 <script>
-var S={goldRecs:[],quarRecs:[],aiRecs:[],batches:0,running:false,decisions:{},speedMult:1};
+var S={goldRecs:[],quarRecs:[],aiRecs:[],batches:0,running:false,decisions:{},speedMult:1,scenarioBStartedAt:null,scenarioBBadRows:0};
 var PIPELINES={scenarioB:'8063e804-d6de-4b8a-a750-e9357fc5dd18',repair:'971b2c65-c4d8-4044-90ad-a0daecc48836'};
 var POWERBI_REPORT_URL='https://app.powerbi.com/reportEmbed?reportId=0e376b19-db43-4f50-b715-6bc8f1e56565&autoAuth=true&ctid=2808f13e-3eee-4625-a70c-f4c8dab8aa28';
 var logLines=[];
@@ -481,16 +481,22 @@ async function loadGoldEcommOrders(batchId){
   return rows;
 }
 
-async function loadQuarantineOrders(){
-  dataLog('Requesting latest quarantine records');
-  log('Quarantine: Fetching latest rows from dbo.quarantine_ecomm_orders...','l-info');
-  var response=await fetch('/api/quarantine-ecomm-orders');
+async function loadQuarantineOrders(options){
+  options=options||{};
+  var params=new URLSearchParams();
+  if(options.since)params.set('since',options.since);
+  if(options.limit)params.set('limit',String(options.limit));
+  if(options.activeOnly!==undefined)params.set('activeOnly',String(options.activeOnly));
+  var label=options.since?'current-run active quarantine records':'latest active quarantine records';
+  dataLog('Requesting '+label);
+  log('Quarantine: Fetching '+label+' from dbo.quarantine_ecomm_orders...','l-info');
+  var response=await fetch('/api/quarantine-ecomm-orders'+(params.toString()?'?'+params.toString():''));
   var data=await response.json();
   if(!response.ok||!data.ok)throw new Error(data.error||'Unable to fetch quarantine records');
   var rows=data.rows||[];
   S.quarRecs=rows;
   updateBadges();
-  log('Quarantine: Loaded '+rows.length+' actual records from dbo.quarantine_ecomm_orders','l-warn');
+  log('Quarantine: Loaded '+rows.length+' '+label+' from dbo.quarantine_ecomm_orders','l-warn');
   return rows;
 }
 
@@ -668,11 +674,11 @@ async function pollRepairPipeline(jobInstanceId,retryAfter){
       var batchId='REPAIR-'+new Date().getTime();
       var goldRows=await loadGoldEcommOrders(batchId);
       await loadQualityResults('ecomm','Repair');
-      var rows=await loadQuarantineOrders();
+      var rows=await loadQuarantineOrders({since:S.scenarioBStartedAt,limit:S.scenarioBBadRows||10,activeOnly:true});
       S.quarRecs=rows;
       updateBadges();
       document.getElementById('tab-ai').innerHTML='<div class="alert ak fade-up">Repair pipeline completed. Latest repaired records are shown in the Pipeline tab from dbo.gold_ecomm_orders.</div>'+
-        (rows.length>0?'<div class="alert aw fade-up">Quarantine query still returns '+rows.length+' latest row(s). This may include historical unrepaired rows because the table has no Is_Repaired flag exposed.</div>':'<div class="alert ak fade-up">No quarantine rows returned.</div>');
+        (rows.length>0?'<div class="alert aw fade-up">There are still '+rows.length+' active quarantine row(s) for this Scenario B run.</div>':'<div class="alert ak fade-up">No active quarantine rows remain for this Scenario B run.</div>');
       switchTab('pipeline');
       renderPBITab();
       return;
@@ -913,7 +919,7 @@ function setScenarioButtonState(activeType){
 }
 
 function hardReset(){
-  S={goldRecs:[],quarRecs:[],aiRecs:[],batches:0,running:false,decisions:{},speedMult:S.speedMult};
+  S={goldRecs:[],quarRecs:[],aiRecs:[],batches:0,running:false,decisions:{},speedMult:S.speedMult,scenarioBStartedAt:null,scenarioBBadRows:0};
   logLines=[];document.getElementById('log-area').innerHTML='';
   ['src','adf','bronze','silver','dq','gate','ai','gold','pbi'].forEach(function(id){sn(id,'idle');prog(id,0);});
   setProgress(0);setSysDot('ok');setSysStatus('Ready');updateBadges();
@@ -1035,8 +1041,9 @@ async function pollFabricPipeline(batchId,records,jobInstanceId,retryAfter){
 
 async function liveScenarioB(){
   var batchId='LIVE-B-'+(4820+(++S.batches));
+  var runStartedAt=new Date(Date.now()-120000).toISOString();
   uiLog('Scenario B button clicked');
-  S.goldRecs=[];S.quarRecs=[];S.aiRecs=[];S.decisions={};updateBadges();
+  S.goldRecs=[];S.quarRecs=[];S.aiRecs=[];S.decisions={};S.scenarioBStartedAt=runStartedAt;S.scenarioBBadRows=0;updateBadges();
   uiLog('Cleared previous Scenario A data from UI state');
   log('--- Scenario B: Starting real Fabric bad-data pipeline '+batchId+' ---','l-warn');
   setSysDot('run');setSysStatus('Starting Scenario B Fabric pipeline...');
@@ -1056,7 +1063,7 @@ async function liveScenarioB(){
     log('Fabric API: Scenario B pipeline accepted. Job instance '+startData.jobInstanceId,'l-ok');
     sn('src','ok');prog('src',100);setProgress(12);
     monitorLog('Started Scenario B pipeline polling');
-    await pollScenarioB(batchId,startData.jobInstanceId,startData.retryAfter||5);
+    await pollScenarioB(batchId,startData.jobInstanceId,startData.retryAfter||5,runStartedAt);
   }catch(err){
     sn('src','err');setSysDot('err');setSysStatus('Could not start Scenario B pipeline');
     log('Scenario B start failed: '+err.message,'l-err');
@@ -1064,7 +1071,7 @@ async function liveScenarioB(){
   }
 }
 
-async function pollScenarioB(batchId,jobInstanceId,retryAfter){
+async function pollScenarioB(batchId,jobInstanceId,retryAfter,runStartedAt){
   var seenStatus='';
   var tick=0;
   var waitingLogged=false;
@@ -1089,16 +1096,19 @@ async function pollScenarioB(batchId,jobInstanceId,retryAfter){
       setProgress(78);setSysStatus('Scenario B completed - loading quarantine data');
       uiLog('Scenario B completed; loading quality and quarantine data');
       log('Scenario B pipeline completed. Loading actual quarantine rows...','l-ok');
-      try{await loadQualityResults('ecomm','Scenario B');}
+      var qualityResult=null;
+      try{qualityResult=await loadQualityResults('ecomm','Scenario B');}
       catch(qErr){
         log('Quality gate fetch failed: '+qErr.message,'l-warn');
         document.getElementById('tab-quality').innerHTML='<div class="alert af fade-up"><strong>Quality gate data could not be loaded.</strong><br>'+qErr.message+'</div>';
       }
-      var rows=await loadQuarantineOrders();
+      var expectedBad=qualityResult?Number(qualityResult.Bad_Rows||0):10;
+      S.scenarioBBadRows=expectedBad;
+      var rows=await loadQuarantineOrders({since:runStartedAt,limit:expectedBad||10,activeOnly:true});
       if(rows.length>0){
         sn('ai','ai');setProgress(86);
         document.getElementById('tab-pipeline').innerHTML='<span class="scenario-pill sp-mixed">Scenario B - bad-data batch</span>'+
-          '<div class="alert af fade-up">Quality gate found '+rows.length+' quarantined records. Repair is available in the AI Engine tab.</div>';
+          '<div class="alert af fade-up">Quality gate found '+expectedBad+' bad row(s). Loaded '+rows.length+' active quarantine record(s) for this run. Repair is available in the AI Engine tab.</div>';
         renderScenarioBAITab(rows);
         uiLog('Rendered AI Engine tab with quarantine records');
         switchTab('ai');
