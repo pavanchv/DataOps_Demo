@@ -1,0 +1,1127 @@
+﻿
+<style>
+:root{
+  --color-header:#0B1F3A;
+  --color-primary:#2563EB;
+  --color-primary-hover:#1D4ED8;
+  --color-primary-light:#DBEAFE;
+  --color-page-bg:#F3F6FA;
+  --color-surface:#FFFFFF;
+  --color-surface-alt:#F8FAFC;
+  --color-border:#D8DEE9;
+  --color-text:#111827;
+  --color-text-secondary:#4B5563;
+  --color-text-muted:#6B7280;
+  --color-success:#15803D;
+  --color-success-bg:#DCFCE7;
+  --color-warning:#D97706;
+  --color-warning-bg:#FEF3C7;
+  --color-error:#DC2626;
+  --color-error-bg:#FEE2E2;
+  --color-info:#0284C7;
+  --color-info-bg:#E0F2FE;
+  --shadow-sm:0 1px 2px rgba(15,23,42,.08);
+  --shadow-md:0 8px 24px rgba(15,23,42,.10);
+  --radius-sm:6px;
+  --radius-md:8px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{min-height:100%;background:var(--color-page-bg)}
+.W{font-family:"Segoe UI",Roboto,Arial,sans-serif;background:var(--color-page-bg);color:var(--color-text);min-height:100vh;max-width:1920px;margin:0 auto}
+
+.topbar{background:var(--color-header);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;gap:18px;box-shadow:var(--shadow-sm)}
+.topbar-title{font-size:15px;font-weight:600;color:#fff;display:flex;align-items:center;gap:10px;white-space:nowrap}
+.topbar-title span{font-size:12px!important;color:#93C5FD!important;font-weight:500}
+.topbar-actions{display:flex;flex-direction:column;align-items:flex-end;justify-content:center;gap:8px}
+.stage-shell{background:var(--color-surface);border-bottom:1px solid var(--color-border);display:flex;align-items:stretch;gap:12px;padding:8px 18px 0}
+.stage-actions{display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:0 6px 8px 0;margin-left:auto;flex-shrink:0}
+.topbar-badges{display:flex;gap:6px;flex-wrap:wrap}
+.tbadge{font-size:11px;padding:5px 9px;border-radius:999px;font-weight:600}
+.tb-g{background:rgba(21,128,61,.18);color:#BBF7D0}
+.tb-p{background:rgba(37,99,235,.20);color:#BFDBFE}
+.tb-r{background:rgba(220,38,38,.20);color:#FECACA}
+.tb-a{background:rgba(217,119,6,.20);color:#FED7AA}
+
+.stage-bar{display:flex;align-items:stretch;background:var(--color-surface);overflow-x:auto;flex:1;min-width:0}
+.snode{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 12px 10px;min-width:104px;cursor:default;transition:background .25s;position:relative;flex-shrink:0}
+.snode-name{font-size:12px;font-weight:650;color:var(--color-text-secondary);transition:color .25s;text-align:center;line-height:1.25}
+.snode-sub{font-size:10px;color:var(--color-text-muted);text-align:center;margin-top:3px;line-height:1.2}
+.snode-dot{width:10px;height:10px;border-radius:50%;background:var(--color-border);margin-bottom:7px;transition:background .25s}
+.snode.s-idle .snode-dot{background:#B4B2A9}
+.snode.s-run .snode-dot{background:var(--color-primary);animation:pulse .8s ease-in-out infinite}
+.snode.s-ok .snode-dot{background:var(--color-success)}
+.snode.s-ok .snode-name{color:var(--color-success)}
+.snode.s-err .snode-dot{background:var(--color-error)}
+.snode.s-err .snode-name{color:var(--color-error)}
+.snode.s-warn .snode-dot{background:var(--color-warning)}
+.snode.s-warn .snode-name{color:var(--color-warning)}
+.snode.s-ai .snode-dot{background:var(--color-primary)}
+.snode.s-ai .snode-name{color:var(--color-primary)}
+.snode-progress{position:absolute;bottom:0;left:12px;height:3px;background:var(--color-primary);width:0;transition:width .1s linear;border-radius:3px}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+.main{display:grid;grid-template-columns:340px minmax(0,1fr);gap:16px;padding:16px;min-height:calc(100vh - 154px)}
+.left-panel{min-width:0;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);box-shadow:var(--shadow-sm);display:flex;flex-direction:column;overflow:hidden;max-height:calc(100vh - 190px)}
+.right-panel{min-width:0;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);box-shadow:var(--shadow-sm);display:flex;flex-direction:column;overflow:hidden}
+
+.panel-hdr{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--color-text-secondary);padding:12px 16px;border-bottom:1px solid var(--color-border);background:var(--color-surface-alt)}
+
+.log-subtitle{padding:12px 16px;border-bottom:1px solid var(--color-border);background:#F8FAFC;color:var(--color-text-secondary);font-size:12px;line-height:1.45}
+.log-subtitle strong{display:block;color:var(--color-text);font-size:13px;margin-bottom:2px}
+.log-area{flex:1;padding:14px 16px;font-family:Consolas,"Cascadia Mono","Courier New",monospace;font-size:12px;line-height:1.7;color:var(--color-text-secondary);overflow-y:auto;min-height:0;background:#FCFDFF}
+.l-ok{color:var(--color-success)}
+.l-err{color:var(--color-error)}
+.l-ai{color:var(--color-primary)}
+.l-info{color:var(--color-info)}
+.l-warn{color:var(--color-warning)}
+.l-dim{color:var(--color-text-muted)}
+.l-ui{color:#9CA3AF}
+
+.btn{font-size:12px;padding:9px 12px;border-radius:var(--radius-sm);border:1px solid var(--color-border);background:var(--color-surface);color:var(--color-text);cursor:pointer;font-family:inherit;transition:all .15s;width:auto;text-align:left;margin-bottom:0;display:flex;align-items:center;gap:7px;font-weight:650;white-space:nowrap;box-shadow:var(--shadow-sm)}
+.btn:hover{background:var(--color-surface-alt);border-color:#CBD5E1}
+.btn:active{transform:scale(.98)}
+.btn:disabled{opacity:.35;cursor:default}
+.btn.btn-running:disabled{opacity:1;cursor:wait;filter:none}
+.btn.btn-locked:disabled{opacity:.28;filter:grayscale(1);cursor:not-allowed;box-shadow:none}
+.btn.btn-running{position:relative;box-shadow:0 0 0 0 rgba(21,128,61,.38);animation:btnPulseClean 1.25s ease-in-out infinite}
+.btn.btn-running.b-red{box-shadow:0 0 0 0 rgba(217,119,6,.42);animation-name:btnPulseMixed}
+.btn.btn-running .btn-dot{animation:dotPulse .75s ease-in-out infinite;box-shadow:0 0 0 4px rgba(255,255,255,.22)}
+.btn.b-blue{background:#15803D;border-color:#15803D;color:#fff}
+.btn.b-blue:hover{background:#166534;border-color:#166534}
+.btn.b-red{background:#D97706;border-color:#D97706;color:#fff}
+.btn.b-red:hover{background:#B45309;border-color:#B45309}
+.btn.b-purple{background:#EEEDFE;border-color:#AFA9EC;color:#3C3489}
+.btn.b-purple:hover{background:#CECBF6}
+.btn.b-green{background:#EAF3DE;border-color:#97C459;color:#27500A}
+.btn.b-green:hover{background:#C0DD97}
+.btn-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.btn-run-text{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;margin-left:2px;color:rgba(255,255,255,.9)}
+@keyframes btnPulseClean{0%,100%{box-shadow:0 0 0 0 rgba(21,128,61,.38)}50%{box-shadow:0 0 0 7px rgba(21,128,61,0)}}
+@keyframes btnPulseMixed{0%,100%{box-shadow:0 0 0 0 rgba(217,119,6,.42)}50%{box-shadow:0 0 0 7px rgba(217,119,6,0)}}
+@keyframes dotPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.55);opacity:.55}}
+
+.content-area{flex:1;overflow-y:auto;padding:18px;max-height:none;background:var(--color-surface)}
+
+.section{margin-bottom:14px}
+.sec-hdr{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-secondary);margin-bottom:10px}
+
+.metric-row{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px}
+.metric{background:var(--color-surface-alt);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:10px;text-align:center}
+.mv{font-size:20px;font-weight:750;color:var(--color-text)}
+.ml{font-size:10px;color:var(--color-text-muted);margin-top:2px;line-height:1.3}
+.mv.c-g{color:#3B6D11}.mv.c-r{color:#A32D2D}.mv.c-p{color:#534AB7}.mv.c-a{color:#854F0B}
+
+.card{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:12px 14px;margin-bottom:10px;box-shadow:var(--shadow-sm)}
+.card-hdr{font-size:13px;font-weight:700;color:var(--color-text-secondary);margin-bottom:9px}
+
+.tbl{width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed}
+.tbl th{font-size:11px;font-weight:700;color:var(--color-text-secondary);text-align:left;padding:8px 10px;border-bottom:1px solid var(--color-border);background:var(--color-surface-alt)}
+.tbl td{padding:8px 10px;border-bottom:1px solid var(--color-border);color:var(--color-text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr.rg td{background:transparent}
+.tbl tr.rb td{background:#FFF8F8}
+.tbl tr.ra td{background:#F8F7FF}
+
+.badge{display:inline-flex;align-items:center;font-size:10px;padding:3px 8px;border-radius:999px;white-space:nowrap;gap:2px;font-weight:700}
+.bk{background:var(--color-success-bg);color:var(--color-success)}
+.bf{background:var(--color-error-bg);color:var(--color-error)}
+.bai{background:var(--color-primary-light);color:var(--color-primary)}
+.bg{background:#FAEEDA;color:#633806}
+.bw{background:#FAEEDA;color:#854F0B}
+.bq{background:#F1EFE8;color:#5F5E5A}
+
+.alert{border-radius:var(--radius-md);padding:11px 13px;font-size:12px;line-height:1.6;margin-bottom:10px;border:1px solid}
+.ak{background:var(--color-success-bg);border-color:#86EFAC;color:#14532D}
+.af{background:var(--color-error-bg);border-color:#FCA5A5;color:#7F1D1D}
+.ai-a{background:var(--color-primary-light);border-color:#93C5FD;color:#1E3A8A}
+.ab{background:var(--color-info-bg);border-color:#7DD3FC;color:#075985}
+.aw{background:var(--color-warning-bg);border-color:#FCD34D;color:#78350F}
+.running-banner{border:1px solid var(--color-border);border-radius:var(--radius-md);padding:22px 24px;margin-bottom:14px;display:flex;align-items:center;gap:16px;box-shadow:var(--shadow-sm);background:var(--color-surface-alt)}
+.running-banner.clean{background:linear-gradient(90deg,#F0FDF4,#FFFFFF);border-color:#86EFAC}
+.running-banner.mixed{background:linear-gradient(90deg,#FFF7ED,#FFFFFF);border-color:#FDBA74}
+.running-mark{width:54px;height:54px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#fff;font-size:23px;font-weight:900;animation:runningMarkPulse 1s ease-in-out infinite}
+.running-banner.clean .running-mark{background:var(--color-success)}
+.running-banner.mixed .running-mark{background:var(--color-warning)}
+.running-title{font-size:25px;font-weight:850;line-height:1.15;color:var(--color-text);margin-bottom:4px}
+.running-sub{font-size:13px;color:var(--color-text-secondary);line-height:1.45}
+.running-dots::after{content:"";display:inline-block;width:32px;text-align:left;animation:runningDots 1.2s steps(4,end) infinite}
+@keyframes runningMarkPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.08);opacity:.78}}
+@keyframes runningDots{0%{content:""}25%{content:"."}50%{content:".."}75%{content:"..."}100%{content:"...."}}
+
+.teams-card{background:#042C53;border-radius:8px;padding:10px 12px;font-size:11px;color:#B5D4F4;margin-bottom:8px;line-height:1.6}
+.teams-hdr{font-size:10px;font-weight:500;color:#85B7EB;margin-bottom:4px}
+
+.ai-engine{border:1px solid #AFA9EC;border-radius:9px;overflow:hidden;margin-bottom:8px}
+.ai-hdr{background:#EEEDFE;padding:8px 12px;display:flex;align-items:center;gap:7px;border-bottom:0.5px solid #AFA9EC}
+.ai-title{font-size:11px;font-weight:500;color:#3C3489}
+.ai-sub{font-size:10px;color:#534AB7;margin-top:1px}
+.ai-rows-wrap{padding:0 12px}
+.ai-row{display:flex;align-items:flex-start;justify-content:space-between;padding:8px 0;border-bottom:0.5px solid var(--color-border-tertiary);gap:6px}
+.ai-row:last-child{border-bottom:none}
+.ai-rec{font-size:11px;font-weight:500;color:var(--color-text)}
+.ai-sug{font-size:10px;color:var(--color-text-secondary);margin-top:2px;line-height:1.4}
+.ai-conf{font-size:9px;color:#534AB7;margin-top:1px}
+.ai-acts{display:flex;gap:4px;flex-shrink:0;align-items:center;padding-top:2px}
+.bap{font-size:10px;padding:3px 9px;border-radius:20px;border:none;background:#3B6D11;color:#fff;cursor:pointer}
+.bap:hover{opacity:.82}
+.brj{font-size:10px;padding:3px 9px;border-radius:20px;border:1px solid var(--color-border);background:var(--color-surface);color:var(--color-text-secondary);cursor:pointer}
+.bdone{font-size:10px;padding:3px 9px;border-radius:20px;border:none;cursor:default}
+.bdone.ap{background:#EAF3DE;color:#27500A}
+.bdone.rj{background:#F1EFE8;color:#5F5E5A}
+
+.bar-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.bar-lbl{font-size:10px;color:var(--color-text-secondary);min-width:70px}
+.bar-track{flex:1;height:5px;background:var(--color-surface-alt);border-radius:3px;overflow:hidden}
+.bar-fill{height:100%;border-radius:3px;transition:width .8s ease}
+.bar-val{font-size:10px;font-weight:500;min-width:28px;text-align:right}
+
+.tab-row{display:flex;gap:6px;border-bottom:1px solid var(--color-border);background:var(--color-surface-alt);padding:10px 12px}
+.rtab{font-size:13px;padding:8px 13px;cursor:pointer;color:var(--color-text-secondary);border:1px solid transparent;border-radius:999px;transition:all .15s;white-space:nowrap;font-weight:650}
+.rtab:hover{background:#EEF2F7;color:var(--color-text)}
+.rtab.active{color:#fff;border-color:var(--color-primary);font-weight:750;background:var(--color-primary);box-shadow:var(--shadow-sm)}
+
+.auto-indicator{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--color-text-muted)}
+.auto-dot{width:6px;height:6px;border-radius:50%;background:#B4B2A9}
+.auto-dot.running{background:#378ADD;animation:pulse .6s ease-in-out infinite}
+.auto-dot.done{background:#639922}
+.auto-dot.err{background:#E24B4A}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
+.fade-up{animation:fadeUp .25s ease}
+
+
+.scenario-pill{display:inline-flex;align-items:center;gap:4px;font-size:10px;padding:2px 8px;border-radius:20px;margin-bottom:8px}
+.sp-clean{background:#EAF3DE;color:#27500A}
+.sp-mixed{background:#FCEBEB;color:#A32D2D}
+.report-frame{width:100%;height:calc(100vh - 260px);min-height:620px;border:0;border-radius:var(--radius-md);background:#fff}
+.report-link{font-size:12px;color:var(--color-primary);text-decoration:none;font-weight:650}
+.report-link:hover{text-decoration:underline}
+.center-state{min-height:320px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:var(--color-text);padding:32px}
+.center-state-icon{width:88px;height:88px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--color-success-bg);color:var(--color-success);font-size:56px;font-weight:800;line-height:1;margin-bottom:18px;box-shadow:var(--shadow-sm)}
+.center-state-title{font-size:18px;font-weight:750;margin-bottom:6px}
+.center-state-text{font-size:13px;color:var(--color-text-secondary);max-width:460px;line-height:1.5}
+@media(max-width:1100px){
+  .main{grid-template-columns:1fr}
+  .left-panel{max-height:360px}
+  .log-area{min-height:0}
+  .topbar{align-items:flex-start;flex-direction:column}
+  .topbar-actions{align-items:flex-start}
+  .stage-shell{flex-direction:column}
+  .stage-actions{justify-content:flex-start;padding:0 16px 10px;flex-wrap:wrap}
+}
+</style>
+
+<div class="W">
+<div class="topbar">
+  <div class="topbar-title">
+    <div style="width:8px;height:8px;border-radius:50%;background:#639922;flex-shrink:0" id="sys-dot"></div>
+    Azure DataOps - Live Demo
+    <span style="font-size:10px;color:#378ADD;margin-left:4px" id="sys-status">Ready</span>
+  </div>
+  <div class="topbar-actions">
+    <div class="topbar-badges">
+      <span class="tbadge tb-g" id="tb-gold">Gold: 0</span>
+      <span class="tbadge tb-a" id="tb-batches">Batches: 0</span>
+      <span class="tbadge tb-p" id="tb-ai">AI-cleaned: 0</span>
+      <span class="tbadge tb-r" id="tb-quar">Quarantined: 0</span>
+    </div>
+  </div>
+</div>
+
+<div class="stage-shell">
+  <div class="stage-bar" id="stage-bar">
+    <div class="snode s-idle" id="sn-src"><div class="snode-dot"></div><div class="snode-name">Source</div><div class="snode-sub">ERP/Fulfill</div><div class="snode-progress" id="sp-src"></div></div>
+    <div class="snode s-idle" id="sn-adf"><div class="snode-dot"></div><div class="snode-name">Fabric</div><div class="snode-sub">Ingest</div><div class="snode-progress" id="sp-adf"></div></div>
+    <div class="snode s-idle" id="sn-bronze"><div class="snode-dot"></div><div class="snode-name">Bronze</div><div class="snode-sub">Raw landing</div><div class="snode-progress" id="sp-bronze"></div></div>
+    <div class="snode s-idle" id="sn-silver"><div class="snode-dot"></div><div class="snode-name">Silver</div><div class="snode-sub">Cleaned</div><div class="snode-progress" id="sp-silver"></div></div>
+    <div class="snode s-idle" id="sn-dq"><div class="snode-dot"></div><div class="snode-name">DQ Check</div><div class="snode-sub">Databricks</div><div class="snode-progress" id="sp-dq"></div></div>
+    <div class="snode s-idle" id="sn-gate"><div class="snode-dot"></div><div class="snode-name">Quality gate</div><div class="snode-sub">Pass/Fail</div><div class="snode-progress" id="sp-gate"></div></div>
+    <div class="snode s-idle" id="sn-ai"><div class="snode-dot"></div><div class="snode-name">AI engine</div><div class="snode-sub">Repair</div><div class="snode-progress" id="sp-ai"></div></div>
+    <div class="snode s-idle" id="sn-gold"><div class="snode-dot"></div><div class="snode-name">Gold</div><div class="snode-sub">Business-ready</div><div class="snode-progress" id="sp-gold"></div></div>
+    <div class="snode s-idle" id="sn-pbi"><div class="snode-dot"></div><div class="snode-name">Power BI</div><div class="snode-sub">Dashboard</div><div class="snode-progress" id="sp-pbi"></div></div>
+  </div>
+  <div class="stage-actions">
+    <button class="btn b-blue" id="btn-clean" onclick="runScenario('clean')"><div class="btn-dot" style="background:#BBF7D0"></div>Scenario A - clean batch</button>
+    <button class="btn b-red" id="btn-mixed" onclick="runScenario('mixed')"><div class="btn-dot" style="background:#FED7AA"></div>Scenario B - bad-data batch</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="left-panel">
+    <div class="log-subtitle">
+      <strong>Azure DataOps control center</strong>
+      Fully automated live demo with real-time pipeline status, AI repair workflow, and embedded Power BI reporting.
+    </div>
+    <div class="panel-hdr">Pipeline log</div>
+    <div class="log-area" id="log-area"></div>
+  </div>
+
+  <div class="right-panel">
+    <div class="tab-row">
+      <div class="rtab active" onclick="switchTab('pipeline')">Pipeline</div>
+      <div class="rtab" onclick="switchTab('quality')">Quality gate</div>
+      <div class="rtab" onclick="switchTab('ai')">AI engine</div>
+      <div class="rtab" onclick="switchTab('pbi')">Power BI</div>
+    </div>
+    <div class="content-area" id="content-area">
+      <div id="tab-pipeline"><div style="font-size:12px;color:var(--color-text-muted);padding:20px 0">Select a scenario on the left to start the automated demo. Watch each stage activate in real time across all four tabs.</div></div>
+      <div id="tab-quality" style="display:none"></div>
+      <div id="tab-ai" style="display:none"></div>
+      <div id="tab-pbi" style="display:none"></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+var S={goldRecs:[],quarRecs:[],aiRecs:[],batches:0,running:false,decisions:{},speedMult:1};
+var PIPELINES={scenarioB:'8063e804-d6de-4b8a-a750-e9357fc5dd18',repair:'971b2c65-c4d8-4044-90ad-a0daecc48836'};
+var POWERBI_REPORT_URL='https://app.powerbi.com/reportEmbed?reportId=0e376b19-db43-4f50-b715-6bc8f1e56565&autoAuth=true&ctid=2808f13e-3eee-4625-a70c-f4c8dab8aa28';
+var logLines=[];
+var liveLogTicks={};
+var activeTab='pipeline';
+
+function updateSpeed(v){var map={1:3,2:1.5,3:0.7,4:0.3};S.speedMult=map[v]||1;}
+function d(ms){return new Promise(function(r){setTimeout(r,Math.round(ms*S.speedMult));})}
+
+function log(msg,cls){
+  var now=new Date();var ts=now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0')+':'+now.getSeconds().toString().padStart(2,'0');
+  logLines.push('<span class="'+(cls||'l-dim')+'">['+ts+'] '+msg+'</span>');
+  if(logLines.length>80)logLines=logLines.slice(-80);
+  var la=document.getElementById('log-area');la.innerHTML=logLines.join('\n');la.scrollTop=la.scrollHeight;
+}
+function liveLog(key,msg,cls){
+  liveLogTicks[key]=(liveLogTicks[key]||0)+1;
+  var pulse=['.','..','...','....','.....'][liveLogTicks[key]%5];
+  var marker='data-live-key="'+key+'"';
+  var line='<span '+marker+' class="'+(cls||'l-ui')+'">'+msg+' '+pulse+'</span>';
+  var found=false;
+  for(var i=0;i<logLines.length;i++){
+    if(logLines[i].indexOf(marker)>-1){logLines[i]=line;found=true;break;}
+  }
+  if(!found)logLines.push(line);
+  if(logLines.length>80)logLines=logLines.slice(-80);
+  var la=document.getElementById('log-area');la.innerHTML=logLines.join('\n');la.scrollTop=la.scrollHeight;
+}
+function uiLog(msg){log('UI: '+msg,'l-ui');}
+function monitorLog(msg){log('Monitor: '+msg,'l-ui');}
+function dataLog(msg){log('Data: '+msg,'l-ui');}
+function liveUiLog(key,msg){liveLog(key,'UI: '+msg,'l-ui');}
+function liveMonitorLog(key,msg){liveLog(key,'Monitor: '+msg,'l-ui');}
+function pollDelay(retryAfter){return Math.min(3000,Math.max(1500,(retryAfter||3)*1000));}
+
+function sn(id,state){var el=document.getElementById('sn-'+id);if(el)el.className='snode s-'+state;}
+function prog(id,pct){var el=document.getElementById('sp-'+id);if(el)el.style.width=pct+'%';}
+async function animProg(id,from,to,ms){var steps=20;var inc=(to-from)/steps;var stepMs=ms/steps;for(var i=0;i<=steps;i++){prog(id,from+inc*i);await d(stepMs/steps);}}
+
+function setProgress(pct){var el=document.getElementById('prog-fill');if(el)el.style.width=pct+'%';}
+function setSysDot(c){var el=document.getElementById('sys-dot');el.style.background=c=='ok'?'#639922':c=='run'?'#378ADD':c=='err'?'#E24B4A':'#639922';}
+function setSysStatus(t){document.getElementById('sys-status').textContent=t;}
+function updateBadges(){
+  document.getElementById('tb-gold').textContent='Gold: '+S.goldRecs.length;
+  document.getElementById('tb-batches').textContent='Batches: '+S.batches;
+  document.getElementById('tb-ai').textContent='AI-cleaned: '+S.aiRecs.length;
+  document.getElementById('tb-quar').textContent='Quarantined: '+S.quarRecs.length;
+}
+
+function switchTab(t){
+  activeTab=t;
+  document.querySelectorAll('.rtab').forEach(function(el,i){el.classList.remove('active');});
+  var tabs=['pipeline','quality','ai','pbi'];
+  tabs.forEach(function(id,i){
+    if(id===t)document.querySelectorAll('.rtab')[i].classList.add('active');
+    document.getElementById('tab-'+id).style.display=id===t?'block':'none';
+  });
+}
+
+var CLEAN=[
+  {id:'ORD-1042',src:'ERP',cust:'Acme Corp',amt:'$12,450',region:'West',issue:null,ok:true},
+  {id:'ORD-1043',src:'ERP',cust:'Delta LLC',amt:'$8,900',region:'East',issue:null,ok:true},
+  {id:'ORD-1044',src:'ERP',cust:'Nexus Inc',amt:'$31,200',region:'Central',issue:null,ok:true},
+  {id:'ORD-1045',src:'ERP',cust:'Orbit Co',amt:'$5,750',region:'West',issue:null,ok:true},
+  {id:'ORD-1046',src:'ERP',cust:'Vertex Ltd',amt:'$19,300',region:'East',issue:null,ok:true}
+];
+var MIXED=[
+  {id:'FUL-2201',src:'Fulfillment',cust:'Prime Ltd',amt:'$9,100',region:'West',issue:null,ok:true},
+  {id:'FUL-2202',src:'Fulfillment',cust:'NULL',amt:'$44,000',region:'East',issue:'Missing customer ID',ok:false,aiSug:'Infer from order history -> "Pinnacle Corp"',aiConf:'92%'},
+  {id:'FUL-2203',src:'Fulfillment',cust:'Apex Inc',amt:'$0.00',region:'Central',issue:'Zero-value anomaly',ok:false,aiSug:'Replace with contract price -> $7,800 (ref CTR-449)',aiConf:'88%'},
+  {id:'FUL-2202B',src:'Fulfillment',cust:'Prime Ltd',amt:'$9,100',region:'West',issue:'Duplicate record',ok:false,aiSug:'Remove duplicate - keep FUL-2201 as canonical',aiConf:'99%'},
+  {id:'FUL-2204',src:'Fulfillment',cust:'Crest Co',amt:'$3,400',region:'East',issue:null,ok:true}
+];
+
+function renderPipelineTab(batchId,records,type,phase){
+  var t=document.getElementById('tab-pipeline');
+  var pill=type==='clean'?'<span class="scenario-pill sp-clean">Scenario A - clean batch</span>':'<span class="scenario-pill sp-mixed">Scenario B - mixed batch</span>';
+  var ok=records.filter(function(r){return r.ok;});
+  var bad=records.filter(function(r){return !r.ok;});
+  var phaseHtml='';
+  if(phase==='running')phaseHtml='<div class="alert ab fade-up"><span style="font-size:12px">Running</span> Pipeline running - batch '+batchId+'</div>';
+  else if(phase==='clean-done')phaseHtml='<div class="alert ak fade-up">All '+records.length+' records passed quality checks and promoted to Gold. Power BI refreshed.</div>';
+  else if(phase==='stopped')phaseHtml='<div class="alert af fade-up"><strong>Pipeline stopped.</strong> '+bad.length+' record(s) failed ('+Math.round(bad.length/records.length*100)+'% bad-data rate >= 20% threshold). Teams alert sent. AI engine activated.</div>';
+  else if(phase==='ai-done')phaseHtml='<div class="alert ai-a fade-up">AI engine processed quarantined records. Approved records sent to Gold with ai_cleaned flag.</div>';
+  t.innerHTML=pill+phaseHtml+
+    '<div class="section"><div class="sec-hdr">Batch '+batchId+' - record status</div>'+
+    '<div class="card" style="padding:0;overflow:hidden"><table class="tbl">'+
+    '<thead><tr><th style="width:85px">Record</th><th style="width:90px">Source</th><th style="width:80px">Amount</th><th>Issue</th><th style="width:80px">Status</th></tr></thead><tbody>'+
+    records.map(function(r){
+      return '<tr class="'+(r.ok?'rg':'rb')+'"><td>'+r.id+'</td><td>'+r.src+'</td><td>'+r.amt+'</td><td style="color:'+(r.issue?'#A32D2D':'var(--color-text-muted)')+'">'+( r.issue||'-')+'</td><td><span class="badge '+(r.ok?'bk':'bf')+'">'+(r.ok?'Pass':'Fail')+'</span></td></tr>';
+    }).join('')+
+    '</tbody></table></div></div>';
+}
+
+function fmtValue(v){
+  if(v===null||v===undefined||v==='')return '-';
+  if(typeof v==='number')return v.toLocaleString(undefined,{maximumFractionDigits:2});
+  if(typeof v==='string'&&/^\d{4}-\d{2}-\d{2}T/.test(v)){
+    var dt=new Date(v);
+    if(!isNaN(dt.getTime()))return dt.toLocaleString();
+  }
+  return String(v);
+}
+
+function renderGoldWebsiteOrders(batchId,rows){
+  var t=document.getElementById('tab-pipeline');
+  var body=rows.map(function(r){
+    return '<tr class="rg">'+
+      '<td>'+fmtValue(r.Order_ID)+'</td>'+
+      '<td>'+fmtValue(r.Source_App)+'</td>'+
+      '<td>'+fmtValue(r.Order_Datetime)+'</td>'+
+      '<td>'+fmtValue(r.Customer_Name)+'</td>'+
+      '<td>'+fmtValue(r.Product_Name)+'</td>'+
+      '<td>'+fmtValue(r.Quantity)+'</td>'+
+      '<td>'+fmtValue(r.Net_Amount)+'</td>'+
+      '<td>'+fmtValue(r.Order_Status)+'</td>'+
+      '<td>'+fmtValue(r.Ingestion_Timestamp)+'</td>'+
+    '</tr>';
+  }).join('');
+
+  t.innerHTML='<span class="scenario-pill sp-clean">Scenario A - clean batch</span>'+
+    '<div class="alert ak fade-up">Fabric pipeline completed. Showing latest '+rows.length+' records from dbo.gold_website_orders.</div>'+
+    '<div class="section"><div class="sec-hdr">Batch '+batchId+' - latest Gold records</div>'+
+    '<div class="card" style="padding:0;overflow:auto"><table class="tbl" style="min-width:980px">'+
+    '<thead><tr><th>Order ID</th><th>Source</th><th>Order time</th><th>Customer</th><th>Product</th><th>Qty</th><th>Net amount</th><th>Status</th><th>Ingested</th></tr></thead>'+
+    '<tbody>'+(body||'<tr><td colspan="9" style="text-align:center;color:var(--color-text-muted);padding:14px">No Gold rows returned.</td></tr>')+'</tbody>'+
+    '</table></div></div>';
+}
+
+function renderScenarioAWaiting(batchId){
+  var t=document.getElementById('tab-pipeline');
+  t.innerHTML='<span class="scenario-pill sp-clean">Scenario A - clean batch</span>'+
+    runningBanner('clean','Scenario A pipeline is running','Batch '+batchId+' is moving clean website orders through Fabric to Gold. Live status is being tracked in the log.')+
+    '<div class="alert ab fade-up">Running Fabric pipeline - batch '+batchId+'. Actual Gold records will appear here after the pipeline completes.</div>'+
+    '<div class="section"><div class="sec-hdr">Batch '+batchId+' - record status</div>'+
+    '<div class="card"><div style="font-size:12px;color:var(--color-text-muted);line-height:1.6">Waiting for dbo.gold_website_orders to refresh from Fabric. No dummy order rows are shown for Scenario A.</div></div></div>';
+}
+
+function renderScenarioBWaiting(batchId){
+  var t=document.getElementById('tab-pipeline');
+  t.innerHTML='<span class="scenario-pill sp-mixed">Scenario B - bad-data batch</span>'+
+    runningBanner('mixed','Scenario B pipeline is running','Batch '+batchId+' is processing bad-data flow. Quarantine and quality-gate results will load after Fabric completes.')+
+    '<div class="alert ab fade-up">Running Fabric pipeline - batch '+batchId+'. Quarantine rows will load after completion.</div>';
+}
+
+function runningBanner(type,title,text){
+  return '<div class="running-banner '+type+' fade-up">'+
+    '<div class="running-mark">↻</div>'+
+    '<div><div class="running-title">'+title+'<span class="running-dots"></span></div>'+
+    '<div class="running-sub">'+text+'</div></div>'+
+    '</div>';
+}
+
+async function loadGoldWebsiteOrders(batchId){
+  dataLog('Requesting latest website Gold records');
+  log('Gold: Fetching latest rows from dbo.gold_website_orders...','l-info');
+  var response=await fetch('/api/gold-website-orders');
+  var data=await response.json();
+  if(!response.ok||!data.ok)throw new Error(data.error||'Unable to fetch Gold records');
+  var rows=data.rows||[];
+  S.goldRecs=rows;
+  updateBadges();
+  renderGoldWebsiteOrders(batchId,rows);
+  uiLog('Rendered Scenario A Gold table');
+  log('Gold: Loaded '+rows.length+' actual records from dbo.gold_website_orders','l-ok');
+  return rows;
+}
+
+function renderGoldEcommOrders(batchId,rows){
+  var t=document.getElementById('tab-pipeline');
+  var body=rows.map(function(r){
+    return '<tr class="rg">'+
+      '<td>'+fmtValue(r.Order_ID)+'</td>'+
+      '<td>'+fmtValue(r.Transaction_Date)+'</td>'+
+      '<td>'+fmtValue(r.Product)+'</td>'+
+      '<td>'+fmtValue(r.Quantity)+'</td>'+
+      '<td>'+fmtValue(r.Price)+'</td>'+
+      '<td>'+fmtValue(r.Total_Amount)+'</td>'+
+      '<td>'+fmtValue(r.Source_File)+'</td>'+
+      '<td>'+fmtValue(r.Ingestion_Timestamp)+'</td>'+
+    '</tr>';
+  }).join('');
+  t.innerHTML='<span class="scenario-pill sp-clean">Repair completed - Gold layer</span>'+
+    '<div class="alert ak fade-up">Showing latest '+rows.length+' repaired / clean records from dbo.gold_ecomm_orders.</div>'+
+    '<div class="section"><div class="sec-hdr">Batch '+batchId+' - latest ecomm Gold records</div>'+
+    '<div class="card" style="padding:0;overflow:auto"><table class="tbl" style="min-width:900px">'+
+    '<thead><tr><th>Order ID</th><th>Transaction date</th><th>Product</th><th>Qty</th><th>Price</th><th>Total amount</th><th>Source file</th><th>Ingested</th></tr></thead>'+
+    '<tbody>'+(body||'<tr><td colspan="8" style="text-align:center;color:var(--color-text-muted);padding:14px">No ecomm Gold rows returned.</td></tr>')+'</tbody>'+
+    '</table></div></div>';
+}
+
+async function loadGoldEcommOrders(batchId){
+  dataLog('Requesting latest ecomm Gold records');
+  log('Gold: Fetching latest rows from dbo.gold_ecomm_orders...','l-info');
+  var response=await fetch('/api/gold-ecomm-orders');
+  var data=await response.json();
+  if(!response.ok||!data.ok)throw new Error(data.error||'Unable to fetch ecomm Gold records');
+  var rows=data.rows||[];
+  S.goldRecs=rows;
+  updateBadges();
+  renderGoldEcommOrders(batchId,rows);
+  uiLog('Rendered repaired ecomm Gold table');
+  log('Gold: Loaded '+rows.length+' actual records from dbo.gold_ecomm_orders','l-ok');
+  return rows;
+}
+
+async function loadQuarantineOrders(){
+  dataLog('Requesting latest quarantine records');
+  log('Quarantine: Fetching latest rows from dbo.quarantine_ecomm_orders...','l-info');
+  var response=await fetch('/api/quarantine-ecomm-orders');
+  var data=await response.json();
+  if(!response.ok||!data.ok)throw new Error(data.error||'Unable to fetch quarantine records');
+  var rows=data.rows||[];
+  S.quarRecs=rows;
+  updateBadges();
+  log('Quarantine: Loaded '+rows.length+' actual records from dbo.quarantine_ecomm_orders','l-warn');
+  return rows;
+}
+
+function renderQualityResult(result,label){
+  var t=document.getElementById('tab-quality');
+  if(!result){
+    t.innerHTML='<div class="alert aw fade-up">No quality gate result returned yet.</div>';
+    return;
+  }
+  var total=Number(result.Total_Rows||0);
+  var clean=Number(result.Clean_Rows||0);
+  var bad=Number(result.Bad_Rows||0);
+  var duplicates=Number(result.Duplicate_Rows||0);
+  var score=Number(result.Quality_Score_Percentage||0);
+  t.innerHTML=
+    '<div class="metric-row">'+
+    '<div class="metric"><div class="mv">'+fmtValue(total)+'</div><div class="ml">Total rows</div></div>'+
+    '<div class="metric"><div class="mv c-g">'+fmtValue(clean)+'</div><div class="ml">Clean rows</div></div>'+
+    '<div class="metric"><div class="mv '+(bad?'c-r':'c-g')+'">'+fmtValue(bad)+'</div><div class="ml">Bad rows</div></div>'+
+    '<div class="metric"><div class="mv '+(score>=80?'c-g':score>=60?'c-a':'c-r')+'">'+fmtValue(score)+'%</div><div class="ml">Quality score</div></div>'+
+    '</div>'+
+    '<div class="alert '+(bad>0?'aw':'ak')+' fade-up">'+
+    label+' quality gate loaded from dbo.data_quality_results. Table: '+fmtValue(result.Table_Name)+'. Checked: '+fmtValue(result.Check_Timestamp)+'.'+
+    '</div>'+
+    '<div class="card" style="padding:0;overflow:hidden">'+
+    '<table class="tbl"><thead><tr><th>Total</th><th>Clean</th><th>Bad</th><th>Duplicates</th><th>Runtime sec</th><th>Runtime min</th><th>Table</th></tr></thead><tbody>'+
+    '<tr><td>'+fmtValue(total)+'</td><td>'+fmtValue(clean)+'</td><td>'+fmtValue(bad)+'</td><td>'+fmtValue(duplicates)+'</td><td>'+fmtValue(result.Runtime_Seconds)+'</td><td>'+fmtValue(result.Runtime_Minutes)+'</td><td>'+fmtValue(result.Table_Name)+'</td></tr>'+
+    '</tbody></table></div>';
+}
+
+async function loadQualityResults(tableFilter,label){
+  dataLog('Requesting latest quality gate result for '+tableFilter);
+  log('Quality gate: Fetching latest result for '+tableFilter+'...','l-info');
+  var response=await fetch('/api/quality-results?tableFilter='+encodeURIComponent(tableFilter));
+  var data=await response.json();
+  if(!response.ok||!data.ok)throw new Error(data.error||'Unable to fetch quality results');
+  var result=(data.rows&&data.rows[0])||null;
+  renderQualityResult(result,label);
+  uiLog('Rendered '+label+' Quality Gate tab');
+  if(result)log('Quality gate: Loaded '+label+' score '+fmtValue(result.Quality_Score_Percentage)+'%','l-info');
+  return result;
+}
+
+function renderQualityTab(batchId,records){
+  var ok=records.filter(function(r){return r.ok;});
+  var bad=records.filter(function(r){return !r.ok;});
+  var badPct=Math.round(bad.length/records.length*100);
+  var t=document.getElementById('tab-quality');
+  t.innerHTML=
+    '<div class="metric-row">'+
+    '<div class="metric"><div class="mv">'+records.length+'</div><div class="ml">Total records</div></div>'+
+    '<div class="metric"><div class="mv c-g">'+ok.length+'</div><div class="ml">Passed</div></div>'+
+    '<div class="metric"><div class="mv '+(bad.length?'c-r':'c-g')+'">'+bad.length+'</div><div class="ml">Failed</div></div>'+
+    '<div class="metric"><div class="mv '+(badPct>=20?'c-r':'c-g')+'">'+badPct+'%</div><div class="ml">Bad-data rate</div></div>'+
+    '</div>'+
+    (bad.length>0?
+      '<div class="alert af fade-up">Quality gate triggered - '+badPct+'% bad-data rate exceeds 20% threshold. Pipeline stopped.</div>'+
+      '<div class="teams-card fade-up"><div class="teams-hdr">Microsoft Teams - DataOps Alerts</div>'+
+      '<strong style="color:#E6F1FB">DataOps Alert - batch '+batchId+'</strong><br>'+
+      bad.length+' record(s) failed DQ checks - Bad-data rate: '+badPct+'% - Threshold: 20%<br>'+
+      '<span style="color:#F09595">Action: AI engine auto-activating to repair quarantined records.</span></div>'
+      :
+      '<div class="alert ak fade-up">All records passed all four quality checks. No action required - pipeline continues to Silver -> Gold -> Power BI automatically.</div>'
+    )+
+    '<div class="card" style="padding:0;overflow:hidden">'+
+    '<div class="card-hdr" style="padding:8px 12px 0">DQ checks - batch '+batchId+'</div>'+
+    '<table class="tbl"><thead><tr><th style="width:85px">Record</th><th style="width:80px">Amount</th><th>Issue</th><th style="width:90px">DQ result</th><th style="width:70px">Routed to</th></tr></thead><tbody>'+
+    records.map(function(r){
+      return '<tr class="'+(r.ok?'rg':'rb')+'"><td>'+r.id+'</td><td>'+r.amt+'</td><td style="font-size:10px;color:'+(r.issue?'#A32D2D':'var(--color-text-muted)')+'">'+( r.issue||'-')+'</td><td><span class="badge '+(r.ok?'bk':'bf')+'">'+(r.ok?'Pass':'Fail')+'</span></td><td><span class="badge '+(r.ok?'bg':'bq')+'">'+(r.ok?'Gold':'Quarantine')+'</span></td></tr>';
+    }).join('')+
+    '</tbody></table></div>';
+}
+
+function renderAITab(quarRecs,phase){
+  var t=document.getElementById('tab-ai');
+  if(!quarRecs||quarRecs.length===0){t.innerHTML='<div class="alert ab">No quarantined records yet. Run Scenario B or the full demo.</div>';return;}
+  var rows=quarRecs.map(function(r){
+    var dec=S.decisions[r.id];
+    var acts=!dec?
+      '<button class="bap" onclick="decide(\''+r.id+'\',\'ap\')">Approve</button><button class="brj" onclick="decide(\''+r.id+'\',\'rj\')">Reject</button>':
+      dec==='ap'?'<button class="bdone ap">Approved</button>':'<button class="bdone rj">Rejected</button>';
+    return '<div class="ai-row fade-up"><div style="flex:1;min-width:0"><div class="ai-rec">'+r.id+' - '+r.issue+'</div><div class="ai-sug">'+r.aiSug+'</div><div class="ai-conf">Confidence: '+r.aiConf+'</div></div><div class="ai-acts">'+acts+'</div></div>';
+  }).join('');
+  var allDone=quarRecs.every(function(r){return S.decisions[r.id];});
+  var apCount=quarRecs.filter(function(r){return S.decisions[r.id]==='ap';}).length;
+  t.innerHTML=
+    '<div class="alert ai-a fade-up">AI engine activated - '+quarRecs.length+' quarantined records ready for repair. Review each suggestion and approve or reject.</div>'+
+    '<div class="ai-engine">'+
+    '<div class="ai-hdr"><div style="width:20px;height:20px;border-radius:50%;background:#534AB7;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0">AI</div><div><div class="ai-title">AI quarantine engine</div><div class="ai-sub">Suggestions ready - user approval required</div></div></div>'+
+    '<div class="ai-rows-wrap">'+rows+'</div></div>'+
+    (allDone?'<div class="alert ak fade-up" id="ai-ready-msg">'+apCount+' record(s) approved. <strong>'+quarRecs.filter(function(r){return S.decisions[r.id]==='rj';}).length+'</strong> rejected (remain quarantined).</div><button class="btn b-purple fade-up" style="width:auto" onclick="sendToGold()">Send approved records to Gold -></button>':'');
+}
+
+function renderScenarioBAITab(rows){
+  var t=document.getElementById('tab-ai');
+  if(!rows||rows.length===0){
+    t.innerHTML='<div class="alert ak fade-up">Scenario B completed with no current quarantine rows returned.</div>';
+    return;
+  }
+  var body=rows.map(function(r){
+    return '<tr class="rb">'+
+      '<td>'+fmtValue(r.Order_ID)+'</td>'+
+      '<td>'+fmtValue(r.Price)+'</td>'+
+      '<td style="color:#A32D2D">'+fmtValue(r.Error_Reason)+'</td>'+
+      '<td>'+fmtValue(r.Quarantine_Timestamp)+'</td>'+
+    '</tr>';
+  }).join('');
+  t.innerHTML='<div class="alert ai-a fade-up">AI engine activated - '+rows.length+' quarantined records found. Approve starts the repair pipeline for all records.</div>'+
+    '<div class="card" style="padding:0;overflow:auto"><table class="tbl">'+
+    '<thead><tr><th>Order ID</th><th>Price</th><th>Error reason</th><th>Quarantine time</th></tr></thead>'+
+    '<tbody>'+body+'</tbody></table></div>'+
+    '<div class="ai-acts" style="padding-top:8px">'+
+    '<button class="bap" onclick="approveScenarioB()">Approve repair</button>'+
+    '<button class="brj" onclick="rejectScenarioB()">Reject</button>'+
+    '</div>';
+}
+
+function rejectScenarioB(){
+  document.getElementById('tab-ai').innerHTML+='<div class="alert aw fade-up" style="margin-top:8px">Rejected in website demo. Quarantine table rows are unchanged.</div>';
+  log('AI engine: Repair rejected in website. Quarantine rows unchanged.','l-warn');
+}
+
+async function approveScenarioB(){
+  uiLog('Approve repair button clicked');
+  log('AI engine: Approve repair clicked. Starting Rep_s2 repair pipeline...','l-ai');
+  setSysDot('run');setSysStatus('Starting repair pipeline Rep_s2');
+  sn('ai','run');setProgress(88);
+  var buttons=document.querySelectorAll('#tab-ai .bap,#tab-ai .brj');
+  buttons.forEach(function(btn){btn.disabled=true;});
+  uiLog('Disabled AI action buttons while repair is running');
+  document.getElementById('tab-ai').innerHTML+='<div class="alert ab fade-up" style="margin-top:8px" id="repair-status">Starting Rep_s2 repair pipeline...</div>';
+
+  try{
+    var startResponse=await fetch('/api/run-repair',{method:'POST'});
+    var startData=await startResponse.json();
+    if(!startResponse.ok||!startData.ok)throw new Error(startData.error||'Unable to start repair pipeline');
+    log('Fabric API: Rep_s2 accepted. Job instance '+startData.jobInstanceId,'l-ok');
+    monitorLog('Started repair pipeline polling');
+    await pollRepairPipeline(startData.jobInstanceId,startData.retryAfter||5);
+  }catch(err){
+    sn('ai','err');setSysDot('err');setSysStatus('Repair pipeline start failed');
+    log('Repair start failed: '+err.message,'l-err');
+    document.getElementById('repair-status').className='alert af fade-up';
+    document.getElementById('repair-status').innerHTML='<strong>Repair pipeline could not start.</strong><br>'+err.message;
+  }
+}
+
+async function pollRepairPipeline(jobInstanceId,retryAfter){
+  var seenStatus='';
+  var tick=0;
+  var waitingLogged=false;
+  while(true){
+    var waitMs=pollDelay(retryAfter);
+    if(!waitingLogged){liveMonitorLog('repair-wait','Waiting for repair status change');waitingLogged=true;}
+    await d(waitMs);
+    tick++;
+    var response=await fetch('/api/pipeline-status?pipelineId='+encodeURIComponent(PIPELINES.repair)+'&jobInstanceId='+encodeURIComponent(jobInstanceId));
+    var data=await response.json();
+    if(!response.ok||!data.ok)throw new Error(data.error||'Unable to read repair pipeline status');
+    var status=(data.job&&data.job.status)||'Unknown';
+    if(status!==seenStatus){log('Repair pipeline live status: '+status,'l-info');seenStatus=status;waitingLogged=false;}
+
+    if(status==='InProgress'||status==='Running'||status==='NotStarted'||status==='Queued'){
+      sn('ai','run');sn('gold','run');setProgress(Math.min(96,88+(tick*2)));
+      liveUiLog('repair-stage','Updating repair stage indicators');
+      setSysStatus('Repair pipeline running');
+      document.getElementById('repair-status').textContent='Rep_s2 repair pipeline running...';
+    }else if(status==='Completed'||status==='Succeeded'){
+      sn('ai','ok');sn('gold','ok');sn('pbi','ok');setProgress(100);
+      setSysDot('ok');setSysStatus('Repair pipeline completed');
+      log('Repair pipeline completed. Refreshing repaired Gold and quarantine rows...','l-ok');
+      uiLog('Repair completed; switching to repaired data refresh');
+      document.getElementById('repair-status').className='alert ak fade-up';
+      document.getElementById('repair-status').textContent='Rep_s2 completed. Loading repaired records from Gold...';
+      var batchId='REPAIR-'+new Date().getTime();
+      var goldRows=await loadGoldEcommOrders(batchId);
+      await loadQualityResults('ecomm','Repair');
+      var rows=await loadQuarantineOrders();
+      S.quarRecs=rows;
+      updateBadges();
+      document.getElementById('tab-ai').innerHTML='<div class="alert ak fade-up">Repair pipeline completed. Latest repaired records are shown in the Pipeline tab from dbo.gold_ecomm_orders.</div>'+
+        (rows.length>0?'<div class="alert aw fade-up">Quarantine query still returns '+rows.length+' latest row(s). This may include historical unrepaired rows because the table has no Is_Repaired flag exposed.</div>':'<div class="alert ak fade-up">No quarantine rows returned.</div>');
+      switchTab('pipeline');
+      renderPBITab();
+      return;
+    }else if(status==='Failed'||status==='Cancelled'||status==='Canceled'){
+      sn('ai','err');setSysDot('err');setSysStatus('Repair pipeline '+status);
+      log('Repair pipeline '+status+'.','l-err');
+      document.getElementById('repair-status').className='alert af fade-up';
+      document.getElementById('repair-status').textContent='Repair pipeline '+status+'.';
+      return;
+    }else{
+      setSysStatus('Repair status: '+status);
+      document.getElementById('repair-status').textContent='Repair status: '+status;
+    }
+  }
+}
+
+function decide(id,dec){
+  S.decisions[id]=dec;
+  renderAITab(S.quarRecs,'deciding');
+}
+
+function sendToGold(){
+  var approved=S.quarRecs.filter(function(r){return S.decisions[r.id]==='ap';});
+  var rejected=S.quarRecs.filter(function(r){return S.decisions[r.id]==='rj';});
+  approved.forEach(function(r){r.aiCleaned=true;S.goldRecs.push(r);S.aiRecs.push(r);});
+  S.quarRecs=rejected;
+  updateBadges();
+  log('AI-cleaned: '+approved.length+' records sent to Gold with ai_cleaned=true flag','l-ai');
+  log('Power BI refreshed - ai_cleaned flag visible in dashboard','l-ai');
+  sn('ai','ok');sn('gold','ok');sn('pbi','ok');
+  setSysDot('ok');setSysStatus('AI engine complete - '+approved.length+' records to Gold');
+  renderAITab(S.quarRecs,'done');
+  renderPBITab();
+  document.getElementById('tab-ai').innerHTML+='<div class="alert ak fade-up" style="margin-top:8px">'+approved.length+' record(s) AI-cleaned and promoted to Gold. Flag set for Power BI visibility.</div>';
+}
+
+function renderPBITab(){
+  renderPowerBIReport();
+  return;
+  var total=S.goldRecs.length+S.quarRecs.length;
+  var aiC=S.aiRecs.length;
+  var clean=S.goldRecs.length-aiC;
+  var qsc=total>0?Math.round(S.goldRecs.length/total*100):0;
+  var erpR=S.goldRecs.filter(function(r){return r.src==='ERP';}).length;
+  var fulR=S.goldRecs.filter(function(r){return r.src==='Fulfillment';}).length;
+  var fulT=fulR+S.quarRecs.filter(function(r){return r.src==='Fulfillment';}).length;
+  var erpPct=CLEAN.length>0?Math.min(100,Math.round(erpR/CLEAN.length*100)):0;
+  var fulPct=fulT>0?Math.min(100,Math.round(fulR/fulT*100)):0;
+  var bc=function(p){return p>=90?'#639922':p>=70?'#BA7517':'#E24B4A';};
+  var t=document.getElementById('tab-pbi');
+  t.innerHTML=
+    '<div class="metric-row">'+
+    '<div class="metric"><div class="mv c-g">'+qsc+'%</div><div class="ml">Quality score</div></div>'+
+    '<div class="metric"><div class="mv">'+S.goldRecs.length+'</div><div class="ml">Gold records</div></div>'+
+    '<div class="metric"><div class="mv c-p">'+aiC+'</div><div class="ml">AI-cleaned</div></div>'+
+    '<div class="metric"><div class="mv c-a">'+S.quarRecs.length+'</div><div class="ml">Quarantined</div></div>'+
+    '</div>'+
+    '<div class="card"><div class="card-hdr">Data quality by source</div>'+
+    '<div class="bar-row"><span class="bar-lbl">ERP</span><div class="bar-track"><div class="bar-fill" style="width:'+erpPct+'%;background:'+bc(erpPct)+'"></div></div><span class="bar-val" style="color:'+bc(erpPct)+'">'+erpPct+'%</span></div>'+
+    '<div class="bar-row"><span class="bar-lbl">Fulfillment</span><div class="bar-track"><div class="bar-fill" style="width:'+fulPct+'%;background:'+bc(fulPct)+'"></div></div><span class="bar-val" style="color:'+bc(fulPct)+'">'+fulPct+'%</span></div>'+
+    '<div class="bar-row"><span class="bar-lbl">Overall</span><div class="bar-track"><div class="bar-fill" style="width:'+qsc+'%;background:'+bc(qsc)+'"></div></div><span class="bar-val" style="color:'+bc(qsc)+'">'+qsc+'%</span></div>'+
+    '</div>'+
+    '<div class="card" style="padding:0;overflow:hidden"><div class="card-hdr" style="padding:8px 12px 0">Gold layer breakdown</div>'+
+    '<table class="tbl"><thead><tr><th>Status</th><th>Records</th><th style="width:50px">%</th><th>In Power BI</th></tr></thead><tbody>'+
+    (clean>0?'<tr class="rg"><td><span class="badge bk">Clean</span></td><td>'+clean+'</td><td>'+(total>0?Math.round(clean/total*100):0)+'%</td><td>Yes</td></tr>':'')+
+    (aiC>0?'<tr class="ra"><td><span class="badge bai">AI-cleaned</span></td><td>'+aiC+'</td><td>'+(total>0?Math.round(aiC/total*100):0)+'%</td><td>Yes - flagged</td></tr>':'')+
+    (S.quarRecs.length>0?'<tr class="rb"><td><span class="badge bf">Quarantined</span></td><td>'+S.quarRecs.length+'</td><td>'+(total>0?Math.round(S.quarRecs.length/total*100):0)+'%</td><td>Excluded</td></tr>':'')+
+    (!clean&&!aiC&&!S.quarRecs.length?'<tr><td colspan="4" style="color:var(--color-text-muted);text-align:center;padding:14px">No data yet</td></tr>':'')+
+    '</tbody></table></div>'+
+    (S.goldRecs.length>0?'<div class="alert ak fade-up" style="margin-top:0">Dashboard live - '+S.goldRecs.length+' records in Gold. '+(aiC>0?aiC+' AI-repaired and flagged. ':'')+'Leadership has full data visibility.</div>':'');
+}
+
+function renderPowerBIReport(){
+  var t=document.getElementById('tab-pbi');
+  t.innerHTML='<div class="section">'+
+    '<div class="sec-hdr">Power BI report</div>'+
+    '<div class="card">'+
+    '<div class="card-hdr" style="display:flex;align-items:center;justify-content:space-between;gap:10px">'+
+    '<span>Governance Report</span>'+
+    '<a class="report-link" href="/powerbi.html" target="_blank">Open report-only view</a>'+
+    '</div>'+
+    '<iframe class="report-frame" title="Governance Report" src="'+POWERBI_REPORT_URL+'" allowfullscreen="true"></iframe>'+
+    '</div>'+
+    '</div>';
+}
+
+async function runCleanBatch(){
+  var records=CLEAN;S.batches++;var batchId='#'+(4820+S.batches);
+  log('--- Scenario A: Clean batch '+batchId+' (ERP) ---','l-info');
+  setSysDot('run');setSysStatus('Running batch '+batchId);
+  setProgress(5);renderPipelineTab(batchId,records,'clean','running');switchTab('pipeline');
+
+  sn('src','run');await animProg('src',0,100,600);await d(100);
+  log('Source: ERP system triggered batch '+batchId+' ('+records.length+' records)','l-info');
+  sn('src','ok');setProgress(15);
+
+  sn('adf','run');await animProg('adf',0,100,500);
+  log('Fabric: Ingest pipeline started','l-info');
+  sn('adf','ok');setProgress(28);
+
+  sn('bronze','run');await animProg('bronze',0,100,600);
+  log('Bronze: '+records.length+' raw records landed in ADLS Gen2','l-info');
+  sn('bronze','ok');setProgress(42);
+
+  sn('dq','run');
+  log('DQ: Running quality checks on Databricks...','l-info');
+  await d(300);log('  [1/4] Duplicate detection... PASS','l-ok');
+  await d(250);log('  [2/4] Null / invalid fields... PASS','l-ok');
+  await d(250);log('  [3/4] Anomaly detection... PASS','l-ok');
+  await d(250);log('  [4/4] Bad-data % = 0% (threshold 20%)... PASS','l-ok');
+  sn('dq','ok');await animProg('dq',0,100,200);setProgress(58);
+
+  sn('gate','run');await d(300);
+  log('Quality gate: All records PASS -> routing to Silver','l-ok');
+  sn('gate','ok');setProgress(65);
+
+  sn('silver','run');await animProg('silver',0,100,500);
+  log('Silver: Deduplicating, standardising schema...','l-info');
+  sn('silver','ok');setProgress(76);
+
+  sn('ai','ok');setProgress(82);
+
+  sn('gold','run');await animProg('gold',0,100,500);
+  log('Gold: '+records.length+' records promoted to Gold layer','l-ok');
+  records.forEach(function(r){if(!S.goldRecs.find(function(g){return g.id===r.id;}))S.goldRecs.push(r);});
+  sn('gold','ok');setProgress(92);
+
+  sn('pbi','run');await animProg('pbi',0,100,400);
+  log('Power BI: Dataset refresh triggered','l-info');
+  await d(300);log('Power BI: Dashboard updated successfully','l-ok');
+  sn('pbi','ok');setProgress(100);
+
+  updateBadges();renderPipelineTab(batchId,records,'clean','clean-done');
+  renderQualityTab(batchId,records);renderPBITab();
+  setSysDot('ok');setSysStatus('Batch '+batchId+' complete - '+records.length+' records in Gold');
+  log('--- Batch '+batchId+' complete ---','l-ok');
+}
+
+async function runMixedBatch(){
+  var records=MIXED;S.batches++;var batchId='#'+(4820+S.batches);
+  var bad=records.filter(function(r){return !r.ok;});
+  var good=records.filter(function(r){return r.ok;});
+  log('--- Scenario B: Mixed batch '+batchId+' (Fulfillment) ---','l-warn');
+  setSysDot('run');setSysStatus('Running batch '+batchId);
+  setProgress(5);renderPipelineTab(batchId,records,'mixed','running');switchTab('pipeline');
+
+  sn('src','run');await animProg('src',0,100,600);
+  log('Source: Fulfillment system triggered batch '+batchId+' ('+records.length+' records)','l-info');
+  sn('src','ok');setProgress(15);
+
+  sn('adf','run');await animProg('adf',0,100,500);
+  log('Fabric: Ingest pipeline started','l-info');
+  sn('adf','ok');setProgress(28);
+
+  sn('bronze','run');await animProg('bronze',0,100,600);
+  log('Bronze: '+records.length+' raw records landed in ADLS Gen2','l-info');
+  sn('bronze','ok');setProgress(40);
+
+  sn('dq','run');
+  log('DQ: Running quality checks on Databricks...','l-info');
+  await d(300);log('  [1/4] Duplicate detection... '+bad.filter(function(r){return r.issue==='Duplicate record';}).length+' duplicate(s) found','l-warn');
+  await d(250);log('  [2/4] Null / invalid fields... '+bad.filter(function(r){return r.issue&&r.issue.includes('Missing');}).length+' null field(s) found','l-warn');
+  await d(250);log('  [3/4] Anomaly detection... '+bad.filter(function(r){return r.issue&&r.issue.includes('anomaly');}).length+' anomalous value(s) found','l-warn');
+  await d(250);log('  [4/4] Bad-data % = '+Math.round(bad.length/records.length*100)+'% (threshold 20%)... FAIL','l-err');
+  sn('dq','done-err');setProgress(52);
+
+  sn('gate','run');await d(400);
+  log('Quality gate: FAIL - '+Math.round(bad.length/records.length*100)+'% exceeds threshold. Pipeline STOPPED.','l-err');
+  sn('gate','s-err');sn('gate','err');
+  log('Teams notification sent to data team','l-warn');
+  log(bad.length+' records quarantined. '+good.length+' clean records held.','l-warn');
+  setProgress(58);
+
+  good.forEach(function(r){if(!S.goldRecs.find(function(g){return g.id===r.id;}))S.goldRecs.push(r);});
+  S.quarRecs=bad.slice();S.decisions={};
+  updateBadges();
+
+  renderPipelineTab(batchId,records,'mixed','stopped');
+  renderQualityTab(batchId,records);
+
+  sn('silver','warn');log('Silver: Clean records ('+good.length+') staged for Gold','l-info');await d(300);
+  sn('silver','ok');setProgress(64);
+
+  sn('ai','run');
+  log('AI engine: Auto-activating on '+bad.length+' quarantined records...','l-ai');
+  await d(500);
+  bad.forEach(function(r){log('  AI analysing '+r.id+': "'+r.issue+'" -> '+r.aiSug+' ['+r.aiConf+']','l-ai');});
+  await d(300);
+  log('AI engine: Suggestions ready. Awaiting user approval.','l-ai');
+  sn('ai','s-ai');sn('ai','ai');setProgress(72);
+
+  renderAITab(S.quarRecs,'ready');
+  setSysDot('err');setSysStatus('Pipeline stopped - AI engine waiting for approval');
+  log('-> Switch to AI Engine tab to review and approve repairs','l-ai');
+  updateBadges();renderPBITab();
+  switchTab('ai');
+}
+
+async function runScenario(type){
+  if(S.running)return;S.running=true;
+  setScenarioButtonState(type);
+  try{
+    if(type==='clean'){await runCleanBatch();}
+    else if(type==='mixed'){await runMixedBatch();}
+    else if(type==='both'){
+      await runCleanBatch();
+      await d(800);
+      ['src','adf','bronze','silver','dq','gate','ai','gold','pbi'].forEach(function(id){sn(id,'idle');prog(id,0);});
+      setProgress(0);
+      await runMixedBatch();
+    }
+  }finally{
+    S.running=false;setScenarioButtonState(null);
+  }
+}
+
+function disableBtns(v){
+  ['btn-clean','btn-mixed'].forEach(function(id){document.getElementById(id).disabled=v;});
+}
+
+function setScenarioButtonState(activeType){
+  var clean=document.getElementById('btn-clean');
+  var mixed=document.getElementById('btn-mixed');
+  var buttons=[clean,mixed];
+  buttons.forEach(function(btn){
+    btn.disabled=!!activeType;
+    btn.classList.remove('btn-running','btn-locked');
+    var label=btn.querySelector('.btn-run-text');
+    if(label)label.remove();
+  });
+  if(!activeType)return;
+
+  var active=activeType==='clean'?clean:mixed;
+  var inactive=activeType==='clean'?mixed:clean;
+  active.classList.add('btn-running');
+  inactive.classList.add('btn-locked');
+  active.insertAdjacentHTML('beforeend','<span class="btn-run-text">Running</span>');
+}
+
+function hardReset(){
+  S={goldRecs:[],quarRecs:[],aiRecs:[],batches:0,running:false,decisions:{},speedMult:S.speedMult};
+  logLines=[];document.getElementById('log-area').innerHTML='';
+  ['src','adf','bronze','silver','dq','gate','ai','gold','pbi'].forEach(function(id){sn(id,'idle');prog(id,0);});
+  setProgress(0);setSysDot('ok');setSysStatus('Ready');updateBadges();
+  document.getElementById('tab-pipeline').innerHTML='<div style="font-size:12px;color:var(--color-text-muted);padding:20px 0">Select a scenario on the left to start the automated demo.</div>';
+  document.getElementById('tab-quality').innerHTML='';
+  document.getElementById('tab-ai').innerHTML='';
+  document.getElementById('tab-pbi').innerHTML='';
+  switchTab('pipeline');
+  log('System reset. Ready to run.','l-dim');
+}
+
+updateBadges();log('System initialised. Azure DataOps pipeline ready.','l-ok');
+log('Select Scenario A or Scenario B to start a live Fabric pipeline.','l-dim');
+switchTab('pipeline');
+document.querySelectorAll('.rtab').forEach(function(el,i){el.style.display='flex';});
+['tab-pipeline','tab-quality','tab-ai','tab-pbi'].forEach(function(id){document.getElementById(id).style.display='none';});
+document.getElementById('tab-pipeline').style.display='block';
+renderPowerBIReport();
+async function liveScenarioA(){
+  var records=CLEAN;S.batches++;var batchId='LIVE-'+(4820+S.batches);
+  uiLog('Scenario A button clicked');
+  S.quarRecs=[];S.aiRecs=[];S.decisions={};updateBadges();
+  uiLog('Cleared previous scenario state');
+  document.getElementById('tab-quality').innerHTML='<div class="alert ab fade-up">Scenario A is running. Latest website quality gate result will load after completion.</div>';
+  document.getElementById('tab-ai').innerHTML='<div class="center-state"><div class="center-state-icon">✓</div><div class="center-state-title">No AI repair action needed</div><div class="center-state-text">Scenario A completed as a clean-data flow. No quarantined records require AI repair.</div></div>';
+  log('--- Scenario A: Starting real Fabric pipeline '+batchId+' ---','l-info');
+  setSysDot('run');setSysStatus('Starting Fabric pipeline...');
+  setProgress(3);renderScenarioAWaiting(batchId);switchTab('pipeline');
+
+  ['src','adf','bronze','silver','dq','gate','ai','gold','pbi'].forEach(function(id){sn(id,'idle');prog(id,0);});
+  sn('src','run');
+
+  try{
+    uiLog('Sending Scenario A start request to backend');
+    var startResponse=await fetch('/api/run-scenario-a',{method:'POST'});
+    var startData=await startResponse.json();
+    if(!startResponse.ok||!startData.ok)throw new Error(startData.error||'Unable to start Fabric pipeline');
+    log('Fabric API: Pipeline run accepted. Job instance '+startData.jobInstanceId,'l-ok');
+    sn('src','ok');prog('src',100);setProgress(12);
+    sn('adf','run');log('Polling Fabric for live pipeline status...','l-info');
+    monitorLog('Started Scenario A pipeline polling');
+    await pollFabricPipeline(batchId,records,startData.jobInstanceId,startData.retryAfter||5);
+  }catch(err){
+    sn('src','err');setSysDot('err');setSysStatus('Could not start Fabric pipeline');
+    log('Fabric start failed: '+err.message,'l-err');
+    document.getElementById('tab-pipeline').innerHTML='<div class="alert af fade-up"><strong>Could not start Fabric pipeline.</strong><br>'+err.message+'</div>';
+  }
+}
+
+async function pollFabricPipeline(batchId,records,jobInstanceId,retryAfter){
+  var seenStatus='';
+  var tick=0;
+  var waitingLogged=false;
+  while(true){
+    var waitMs=pollDelay(retryAfter);
+    if(!waitingLogged){liveMonitorLog('scenario-a-wait','Waiting for Scenario A status change');waitingLogged=true;}
+    await d(waitMs);
+    tick++;
+    var response=await fetch('/api/pipeline-status?jobInstanceId='+encodeURIComponent(jobInstanceId));
+    var data=await response.json();
+    if(!response.ok||!data.ok)throw new Error(data.error||'Unable to read Fabric pipeline status');
+
+    var job=data.job||{};
+    var status=job.status||job.state||'Unknown';
+    if(status!==seenStatus){
+      log('Fabric live status: '+status,'l-info');
+      seenStatus=status;
+      waitingLogged=false;
+    }
+
+    if(status==='NotStarted'||status==='Queued'){
+      sn('adf','run');setProgress(18);prog('adf',Math.min(60,15*tick));
+      setSysStatus('Fabric pipeline queued');
+      liveUiLog('scenario-a-stage','Scenario A queued in stage tracker');
+    }else if(status==='InProgress'||status==='Running'){
+      sn('adf','ok');prog('adf',100);
+      sn('bronze','ok');prog('bronze',100);
+      sn('silver','ok');prog('silver',100);
+      sn('dq','run');sn('gate','run');
+      setProgress(Math.min(82,25+(tick*8)));
+      prog('dq',Math.min(95,20+(tick*10)));
+      prog('gate',Math.min(80,10+(tick*8)));
+      setSysStatus('Fabric pipeline running live');
+      liveUiLog('scenario-a-stage','Updating Scenario A stage indicators');
+    }else if(status==='Completed'||status==='Succeeded'){
+      ['adf','bronze','silver','dq','gate','ai','gold','pbi'].forEach(function(id){sn(id,'ok');prog(id,100);});
+      setProgress(100);
+      setSysDot('ok');setSysStatus('Fabric pipeline completed - loading Gold data');
+      uiLog('Scenario A completed; starting Gold and quality refresh');
+      log('Fabric pipeline completed. Loading actual Gold records...','l-ok');
+      try{
+        var goldRows=await loadGoldWebsiteOrders(batchId);
+        try{await loadQualityResults('website','Scenario A');}
+        catch(qErr){
+          log('Quality gate fetch failed: '+qErr.message,'l-warn');
+          renderQualityTab(batchId,goldRows.map(function(r){return {id:r.Order_ID,src:r.Source_App,amt:r.Net_Amount,issue:null,ok:true};}));
+        }
+        renderPBITab();
+        setSysStatus('Fabric pipeline completed - Gold data loaded');
+      }catch(fetchErr){
+        log('Gold fetch failed: '+fetchErr.message,'l-err');
+        document.getElementById('tab-pipeline').innerHTML='<div class="alert af fade-up"><strong>Fabric pipeline completed, but Gold data could not be loaded.</strong><br>'+fetchErr.message+'</div>';
+        setSysStatus('Fabric pipeline completed - Gold fetch failed');
+      }
+      return;
+    }else if(status==='Failed'||status==='Cancelled'||status==='Canceled'){
+      sn('dq','err');sn('gate','err');setProgress(58);
+      setSysDot('err');setSysStatus('Fabric pipeline '+status);
+      var failure=(job.failureReason&&JSON.stringify(job.failureReason))||job.message||'Open Fabric monitor for details.';
+      log('Fabric pipeline '+status+': '+failure,'l-err');
+      document.getElementById('tab-pipeline').innerHTML='<div class="alert af fade-up"><strong>Fabric pipeline '+status+'.</strong><br>'+failure+'</div>';
+      return;
+    }else{
+      sn('adf','run');setProgress(Math.min(75,10+(tick*5)));
+      setSysStatus('Fabric status: '+status);
+    }
+  }
+}
+
+async function liveScenarioB(){
+  var batchId='LIVE-B-'+(4820+(++S.batches));
+  uiLog('Scenario B button clicked');
+  S.goldRecs=[];S.quarRecs=[];S.aiRecs=[];S.decisions={};updateBadges();
+  uiLog('Cleared previous Scenario A data from UI state');
+  log('--- Scenario B: Starting real Fabric bad-data pipeline '+batchId+' ---','l-warn');
+  setSysDot('run');setSysStatus('Starting Scenario B Fabric pipeline...');
+  setProgress(3);switchTab('pipeline');
+  document.getElementById('tab-quality').innerHTML='<div class="alert ab fade-up">Scenario B is running. Latest ecomm quality gate result will load after completion.</div>';
+  document.getElementById('tab-ai').innerHTML='<div class="alert ab">AI Engine will activate if quarantine rows are found after Scenario B completes.</div>';
+  renderScenarioBWaiting(batchId);
+
+  ['src','adf','bronze','silver','dq','gate','ai','gold','pbi'].forEach(function(id){sn(id,'idle');prog(id,0);});
+  sn('src','run');
+
+  try{
+    uiLog('Sending Scenario B start request to backend');
+    var startResponse=await fetch('/api/run-scenario-b',{method:'POST'});
+    var startData=await startResponse.json();
+    if(!startResponse.ok||!startData.ok)throw new Error(startData.error||'Unable to start Scenario B pipeline');
+    log('Fabric API: Scenario B pipeline accepted. Job instance '+startData.jobInstanceId,'l-ok');
+    sn('src','ok');prog('src',100);setProgress(12);
+    monitorLog('Started Scenario B pipeline polling');
+    await pollScenarioB(batchId,startData.jobInstanceId,startData.retryAfter||5);
+  }catch(err){
+    sn('src','err');setSysDot('err');setSysStatus('Could not start Scenario B pipeline');
+    log('Scenario B start failed: '+err.message,'l-err');
+    document.getElementById('tab-pipeline').innerHTML='<div class="alert af fade-up"><strong>Could not start Scenario B pipeline.</strong><br>'+err.message+'</div>';
+  }
+}
+
+async function pollScenarioB(batchId,jobInstanceId,retryAfter){
+  var seenStatus='';
+  var tick=0;
+  var waitingLogged=false;
+  while(true){
+    var waitMs=pollDelay(retryAfter);
+    if(!waitingLogged){liveMonitorLog('scenario-b-wait','Waiting for Scenario B status change');waitingLogged=true;}
+    await d(waitMs);
+    tick++;
+    var response=await fetch('/api/pipeline-status?pipelineId='+encodeURIComponent(PIPELINES.scenarioB)+'&jobInstanceId='+encodeURIComponent(jobInstanceId));
+    var data=await response.json();
+    if(!response.ok||!data.ok)throw new Error(data.error||'Unable to read Scenario B pipeline status');
+    var status=(data.job&&data.job.status)||'Unknown';
+    if(status!==seenStatus){log('Scenario B live status: '+status,'l-info');seenStatus=status;waitingLogged=false;}
+
+    if(status==='InProgress'||status==='Running'||status==='NotStarted'||status==='Queued'){
+      sn('adf','run');sn('bronze','run');sn('silver','run');sn('dq','run');
+      setProgress(Math.min(82,20+(tick*8)));
+      setSysStatus('Scenario B pipeline running live');
+      liveUiLog('scenario-b-stage','Updating Scenario B stage indicators');
+    }else if(status==='Completed'||status==='Succeeded'){
+      sn('adf','ok');sn('bronze','ok');sn('silver','ok');sn('dq','ok');sn('gate','warn');
+      setProgress(78);setSysStatus('Scenario B completed - loading quarantine data');
+      uiLog('Scenario B completed; loading quality and quarantine data');
+      log('Scenario B pipeline completed. Loading actual quarantine rows...','l-ok');
+      try{await loadQualityResults('ecomm','Scenario B');}
+      catch(qErr){
+        log('Quality gate fetch failed: '+qErr.message,'l-warn');
+        document.getElementById('tab-quality').innerHTML='<div class="alert af fade-up"><strong>Quality gate data could not be loaded.</strong><br>'+qErr.message+'</div>';
+      }
+      var rows=await loadQuarantineOrders();
+      if(rows.length>0){
+        sn('ai','ai');setProgress(86);
+        document.getElementById('tab-pipeline').innerHTML='<span class="scenario-pill sp-mixed">Scenario B - bad-data batch</span>'+
+          '<div class="alert af fade-up">Quality gate found '+rows.length+' quarantined records. Repair is available in the AI Engine tab.</div>';
+        renderScenarioBAITab(rows);
+        uiLog('Rendered AI Engine tab with quarantine records');
+        switchTab('ai');
+        setSysStatus('Bad data found - AI engine waiting');
+      }else{
+        sn('gate','ok');sn('gold','ok');sn('pbi','ok');setProgress(100);
+        document.getElementById('tab-pipeline').innerHTML='<div class="alert ak fade-up">Scenario B completed. No quarantine rows were returned.</div>';
+        setSysStatus('Scenario B completed - no quarantine rows');
+      }
+      return;
+    }else if(status==='Failed'||status==='Cancelled'||status==='Canceled'){
+      sn('dq','err');sn('gate','err');setProgress(58);
+      setSysDot('err');setSysStatus('Scenario B pipeline '+status);
+      log('Scenario B pipeline '+status+'.','l-err');
+      return;
+    }else{
+      sn('adf','run');setProgress(Math.min(75,10+(tick*5)));
+      setSysStatus('Scenario B status: '+status);
+    }
+  }
+}
+
+runCleanBatch=liveScenarioA;
+runMixedBatch=liveScenarioB;
+</script>
+

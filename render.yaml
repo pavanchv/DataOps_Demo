@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: dataops-demo
+    runtime: docker
+    plan: free
+    envVars:
+      - key: FABRIC_AUTH_MODE
+        value: service_principal
+      - key: AZURE_TENANT_ID
+        sync: false
+      - key: AZURE_CLIENT_ID
+        sync: false
+      - key: AZURE_CLIENT_SECRET
+        sync: false
+      - key: HOST
+        value: 0.0.0.0
