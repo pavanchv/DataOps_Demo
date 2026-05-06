@@ -264,8 +264,28 @@ def get_gold_website_orders():
     return run_sql_query(GOLD_SQL_DATABASE, GOLD_SQL_ENDPOINT_ID, SQL_QUERIES["gold_website_orders"])
 
 
-def get_gold_ecomm_orders():
-    return run_sql_query(GOLD_SQL_DATABASE, GOLD_SQL_ENDPOINT_ID, SQL_QUERIES["gold_ecomm_orders"])
+def get_gold_ecomm_orders(since="", limit=10):
+    where_clause = ""
+    params = []
+    if since:
+        where_clause = "WHERE Ingestion_Timestamp >= ?"
+        params.append(since)
+    query = f"""
+SET NOCOUNT ON;
+SELECT TOP {safe_int(limit, 10)}
+  Order_ID,
+  Transaction_Date,
+  Product,
+  Quantity,
+  Price,
+  Total_Amount,
+  Source_File,
+  Ingestion_Timestamp
+FROM dbo.gold_ecomm_orders
+{where_clause}
+ORDER BY Ingestion_Timestamp DESC;
+"""
+    return run_sql_query(GOLD_SQL_DATABASE, GOLD_SQL_ENDPOINT_ID, query, params)
 
 
 def get_quality_results(table_filter):
@@ -426,7 +446,10 @@ class DemoHandler(SimpleHTTPRequestHandler):
 
         if parsed.path == "/api/gold-ecomm-orders":
             try:
-                rows = get_gold_ecomm_orders()
+                params = urllib.parse.parse_qs(parsed.query)
+                since = params.get("since", [""])[0]
+                limit = safe_int(params.get("limit", ["10"])[0], 10)
+                rows = get_gold_ecomm_orders(since=since, limit=limit)
                 write_json(self, 200, {"ok": True, "rows": rows})
             except Exception as error:
                 write_json(self, 500, {"ok": False, "error": str(error)})
