@@ -274,7 +274,7 @@ html,body{min-height:100%;background:var(--color-page-bg)}
 </div>
 
 <script>
-var S={goldRecs:[],quarRecs:[],aiRecs:[],batches:0,running:false,decisions:{},speedMult:1,scenarioBStartedAt:null,scenarioBBadRows:0,scenarioBRepairInput:[],scenarioBRepairedCount:0};
+var S={goldRecs:[],quarRecs:[],aiRecs:[],batches:0,running:false,decisions:{},speedMult:1,scenarioBStartedAt:null,scenarioBBadRows:0,scenarioBCleanRows:0,scenarioBRepairInput:[],scenarioBRepairedCount:0,goldBadgeOverride:null};
 var PIPELINES={scenarioB:'8063e804-d6de-4b8a-a750-e9357fc5dd18',repair:'971b2c65-c4d8-4044-90ad-a0daecc48836'};
 var POWERBI_REPORT_URL='https://app.powerbi.com/reportEmbed?reportId=0e376b19-db43-4f50-b715-6bc8f1e56565&autoAuth=true&ctid=2808f13e-3eee-4625-a70c-f4c8dab8aa28';
 var logLines=[];
@@ -318,7 +318,7 @@ function setProgress(pct){var el=document.getElementById('prog-fill');if(el)el.s
 function setSysDot(c){var el=document.getElementById('sys-dot');el.style.background=c=='ok'?'#639922':c=='run'?'#378ADD':c=='err'?'#E24B4A':'#639922';}
 function setSysStatus(t){document.getElementById('sys-status').textContent=t;}
 function updateBadges(){
-  document.getElementById('tb-gold').textContent='Gold: '+S.goldRecs.length;
+  document.getElementById('tb-gold').textContent='Gold: '+(S.goldBadgeOverride!==null?S.goldBadgeOverride:S.goldRecs.length);
   document.getElementById('tb-batches').textContent='Batches: '+S.batches;
   document.getElementById('tb-ai').textContent='AI-cleaned: '+Math.max(S.aiRecs.length,S.scenarioBRepairedCount||0);
   document.getElementById('tb-quar').textContent='Quarantined: '+S.quarRecs.length;
@@ -445,7 +445,9 @@ async function loadGoldWebsiteOrders(batchId){
 
 function renderGoldEcommOrders(batchId,rows,repairCount){
   var t=document.getElementById('tab-pipeline');
-  var shownRows=repairCount?rows.slice(0,repairCount):rows;
+  var repairIds=(S.scenarioBRepairInput||[]).map(function(r){return String(r.Order_ID||r.OrderId||r.id||'');}).filter(Boolean);
+  var shownRows=repairIds.length?rows.filter(function(r){return repairIds.indexOf(String(r.Order_ID||''))>=0;}):(repairCount?rows.slice(0,repairCount):rows);
+  if(repairCount&&shownRows.length>repairCount)shownRows=shownRows.slice(0,repairCount);
   var body=shownRows.map(function(r){
     return '<tr class="rg">'+
       '<td>'+fmtValue(r.Order_ID)+'</td>'+
@@ -460,8 +462,9 @@ function renderGoldEcommOrders(batchId,rows,repairCount){
   }).join('');
 
   t.innerHTML='<span class="scenario-pill sp-clean">Repair completed - Gold layer</span>'+
-    '<div class="alert ak fade-up">Repair completed. '+(repairCount||shownRows.length)+' current-run record(s) were processed. Showing latest '+shownRows.length+' Gold record(s) after repair.</div>'+
-    '<div class="section"><div class="sec-hdr">Batch '+batchId+' - latest ecomm Gold records after repair</div>'+
+    '<div class="alert ak fade-up">Repair completed. '+(repairCount||shownRows.length)+' current-run record(s) were processed. Showing '+shownRows.length+' repaired Gold record(s) matched to this repair run.</div>'+
+    (repairCount&&shownRows.length<repairCount?'<div class="alert aw fade-up">Gold returned '+shownRows.length+' matching repaired row(s), but '+repairCount+' record(s) were approved. Add a repair/run id in Gold for exact tracking across every row.</div>':'')+
+    '<div class="section"><div class="sec-hdr">Batch '+batchId+' - repaired ecomm Gold records</div>'+
     '<div class="card" style="padding:0;overflow:auto"><table class="tbl" style="min-width:900px">'+
     '<thead><tr><th>Order ID</th><th>Transaction date</th><th>Product</th><th>Qty</th><th>Price</th><th>Total amount</th><th>Source file</th><th>Ingested</th></tr></thead>'+
     '<tbody>'+(body||'<tr><td colspan="8" style="text-align:center;color:var(--color-text-muted);padding:14px">No ecomm Gold rows returned.</td></tr>')+'</tbody>'+
@@ -473,12 +476,15 @@ async function loadGoldEcommOrders(batchId,repairCount,since){
   log('Gold: Fetching latest rows from dbo.gold_ecomm_orders...','l-info');
   var params=new URLSearchParams();
   if(since)params.set('since',since);
-  if(repairCount)params.set('limit',String(repairCount));
+  if(repairCount)params.set('limit',String(Math.max(25,repairCount*5)));
   var response=await fetch('/api/gold-ecomm-orders'+(params.toString()?'?'+params.toString():''));
   var data=await response.json();
   if(!response.ok||!data.ok)throw new Error(data.error||'Unable to fetch ecomm Gold records');
   var rows=data.rows||[];
-  S.goldRecs=repairCount?rows.slice(0,repairCount):rows;
+  var repairIds=(S.scenarioBRepairInput||[]).map(function(r){return String(r.Order_ID||r.OrderId||r.id||'');}).filter(Boolean);
+  var matchedRows=repairIds.length?rows.filter(function(r){return repairIds.indexOf(String(r.Order_ID||''))>=0;}):(repairCount?rows.slice(0,repairCount):rows);
+  if(repairCount&&matchedRows.length>repairCount)matchedRows=matchedRows.slice(0,repairCount);
+  S.goldRecs=matchedRows;
   updateBadges();
   renderGoldEcommOrders(batchId,rows,repairCount);
   uiLog('Rendered repaired ecomm Gold table');
@@ -625,8 +631,8 @@ function renderScenarioBAITab(rows){
 function rejectScenarioB(){
   var buttons=document.querySelectorAll('#tab-ai .bap,#tab-ai .brj');
   buttons.forEach(function(btn){btn.disabled=true;});
-  setSysStatus('Repair rejected - current quarantine retained');
-  document.getElementById('tab-ai').innerHTML='<div class="alert aw fade-up">Repair rejected for this Scenario B run. Approval options are now closed and quarantine audit rows are unchanged.</div>';
+  setSysStatus('Repair rejected');
+  document.getElementById('tab-ai').innerHTML='<div class="alert aw fade-up">Repair rejected for this Scenario B run. Approval options are now closed.</div>';
   log('AI engine: Repair rejected in website. Quarantine rows unchanged.','l-warn');
 }
 
@@ -685,6 +691,7 @@ async function pollRepairPipeline(jobInstanceId,retryAfter){
       var repairedCount=repairedRows.length||S.scenarioBBadRows||0;
       S.scenarioBRepairedCount=repairedCount;
       S.quarRecs=[];
+      S.goldBadgeOverride=(S.scenarioBCleanRows||0)+repairedCount;
       updateBadges();
       log('Repair pipeline completed. Refreshing repaired Gold records for current run...','l-ok');
       uiLog('Repair completed; switching to repaired data refresh');
@@ -695,8 +702,7 @@ async function pollRepairPipeline(jobInstanceId,retryAfter){
       S.aiRecs=goldRows.slice(0,repairedCount);
       updateBadges();
       uiLog('Kept Quality Gate as pre-repair Scenario B detection result');
-      document.getElementById('tab-ai').innerHTML='<div class="alert ak fade-up">Repair pipeline completed. '+repairedCount+' current-run quarantined record(s) were processed and promoted to Gold.</div>'+
-        '<div class="alert ab fade-up">Quality Gate remains the pre-repair detection result. Quarantine audit rows are not treated as active issues after approval.</div>';
+      document.getElementById('tab-ai').innerHTML='<div class="alert ak fade-up">AI repair completed. '+repairedCount+' current-run record(s) were processed and promoted to Gold.</div>';
       disableBtns(false);
       switchTab('pipeline');
       renderPBITab();
@@ -940,7 +946,7 @@ function setScenarioButtonState(activeType){
 }
 
 function hardReset(){
-  S={goldRecs:[],quarRecs:[],aiRecs:[],batches:0,running:false,decisions:{},speedMult:S.speedMult,scenarioBStartedAt:null,scenarioBBadRows:0,scenarioBRepairInput:[],scenarioBRepairedCount:0};
+  S={goldRecs:[],quarRecs:[],aiRecs:[],batches:0,running:false,decisions:{},speedMult:S.speedMult,scenarioBStartedAt:null,scenarioBBadRows:0,scenarioBCleanRows:0,scenarioBRepairInput:[],scenarioBRepairedCount:0,goldBadgeOverride:null};
   logLines=[];document.getElementById('log-area').innerHTML='';
   ['src','adf','bronze','silver','dq','gate','ai','gold','pbi'].forEach(function(id){sn(id,'idle');prog(id,0);});
   setProgress(0);setSysDot('ok');setSysStatus('Ready');updateBadges();
@@ -962,7 +968,7 @@ renderPowerBIReport();
 async function liveScenarioA(){
   var records=CLEAN;S.batches++;var batchId='LIVE-'+(4820+S.batches);
   uiLog('Scenario A button clicked');
-  S.goldRecs=[];S.quarRecs=[];S.aiRecs=[];S.decisions={};S.scenarioBStartedAt=null;S.scenarioBBadRows=0;S.scenarioBRepairInput=[];S.scenarioBRepairedCount=0;updateBadges();
+  S.goldRecs=[];S.quarRecs=[];S.aiRecs=[];S.decisions={};S.scenarioBStartedAt=null;S.scenarioBBadRows=0;S.scenarioBCleanRows=0;S.scenarioBRepairInput=[];S.scenarioBRepairedCount=0;S.goldBadgeOverride=null;updateBadges();
   uiLog('Cleared previous scenario state');
   document.getElementById('tab-quality').innerHTML='<div class="alert ab fade-up">Scenario A is running. Latest website quality gate result will load after completion.</div>';
   document.getElementById('tab-ai').innerHTML='<div class="center-state"><div class="center-state-icon">✓</div><div class="center-state-title">No AI repair action needed</div><div class="center-state-text">Scenario A completed as a clean-data flow. No quarantined records require AI repair.</div></div>';
@@ -1064,7 +1070,7 @@ async function liveScenarioB(){
   var batchId='LIVE-B-'+(4820+(++S.batches));
   var runStartedAt=new Date(Date.now()-120000).toISOString();
   uiLog('Scenario B button clicked');
-  S.goldRecs=[];S.quarRecs=[];S.aiRecs=[];S.decisions={};S.scenarioBStartedAt=runStartedAt;S.scenarioBBadRows=0;S.scenarioBRepairInput=[];S.scenarioBRepairedCount=0;updateBadges();
+  S.goldRecs=[];S.quarRecs=[];S.aiRecs=[];S.decisions={};S.scenarioBStartedAt=runStartedAt;S.scenarioBBadRows=0;S.scenarioBCleanRows=0;S.scenarioBRepairInput=[];S.scenarioBRepairedCount=0;S.goldBadgeOverride=null;updateBadges();
   uiLog('Cleared previous Scenario A data from UI state');
   log('--- Scenario B: Starting real Fabric bad-data pipeline '+batchId+' ---','l-warn');
   setSysDot('run');setSysStatus('Starting Scenario B Fabric pipeline...');
@@ -1124,6 +1130,8 @@ async function pollScenarioB(batchId,jobInstanceId,retryAfter,runStartedAt){
         document.getElementById('tab-quality').innerHTML='<div class="alert af fade-up"><strong>Quality gate data could not be loaded.</strong><br>'+qErr.message+'</div>';
       }
       var expectedBad=qualityResult?Number(qualityResult.Bad_Rows||0):10;
+      S.scenarioBCleanRows=qualityResult?Number(qualityResult.Clean_Rows||0):0;
+      S.goldBadgeOverride=S.scenarioBCleanRows;
       S.scenarioBBadRows=expectedBad;
       var rows=await loadQuarantineOrders({since:runStartedAt,limit:expectedBad||10,activeOnly:true});
       if(rows.length>0){
