@@ -326,12 +326,34 @@ def safe_int(value, default):
         return default
 
 
-def get_quarantine_ecomm_orders(since="", limit=10, active_only=True):
+def get_quarantine_ecomm_orders(since="", limit=10, active_only=True, run_id=""):
     where_parts = []
     params = []
+    if run_id == "latest":
+        latest_where = []
+        latest_params = []
+        if since:
+            latest_where.append("Quarantine_Timestamp >= ?")
+            latest_params.append(since)
+        if active_only:
+            latest_where.append("(Is_Repaired IS NULL OR Is_Repaired = 0)")
+        latest_clause = ("WHERE " + " AND ".join(latest_where)) if latest_where else ""
+        latest_query = f"""
+SET NOCOUNT ON;
+SELECT TOP 1 Run_ID
+FROM dbo.quarantine_ecomm_orders
+{latest_clause}
+ORDER BY Quarantine_Timestamp DESC;
+"""
+        latest_rows = run_sql_query(SILVER_SQL_DATABASE, SILVER_SQL_ENDPOINT_ID, latest_query, latest_params)
+        run_id = str(latest_rows[0]["Run_ID"]) if latest_rows else ""
+
     if since:
         where_parts.append("Quarantine_Timestamp >= ?")
         params.append(since)
+    if run_id:
+        where_parts.append("Run_ID = ?")
+        params.append(run_id)
     if active_only:
         where_parts.append("(Is_Repaired IS NULL OR Is_Repaired = 0)")
 
@@ -343,6 +365,7 @@ SELECT TOP {safe_int(limit, 10)}
   Price,
   Error_Reason,
   Quarantine_Timestamp,
+  Run_ID,
   Is_Repaired,
   Repaired_Timestamp
 FROM dbo.quarantine_ecomm_orders
@@ -438,7 +461,8 @@ class DemoHandler(SimpleHTTPRequestHandler):
                 since = params.get("since", [""])[0]
                 limit = safe_int(params.get("limit", ["10"])[0], 10)
                 active_only = params.get("activeOnly", ["true"])[0].lower() != "false"
-                rows = get_quarantine_ecomm_orders(since=since, limit=limit, active_only=active_only)
+                run_id = params.get("runId", [""])[0]
+                rows = get_quarantine_ecomm_orders(since=since, limit=limit, active_only=active_only, run_id=run_id)
                 write_json(self, 200, {"ok": True, "rows": rows})
             except Exception as error:
                 write_json(self, 500, {"ok": False, "error": str(error)})
