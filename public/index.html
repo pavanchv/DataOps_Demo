@@ -139,14 +139,18 @@ html,body{min-height:100%;background:var(--color-page-bg)}
 .running-banner{border:1px solid var(--color-border);border-radius:var(--radius-md);padding:22px 24px;margin-bottom:14px;display:flex;align-items:center;gap:16px;box-shadow:var(--shadow-sm);background:var(--color-surface-alt)}
 .running-banner.clean{background:linear-gradient(90deg,#F0FDF4,#FFFFFF);border-color:#86EFAC}
 .running-banner.mixed{background:linear-gradient(90deg,#FFF7ED,#FFFFFF);border-color:#FDBA74}
-.running-mark{width:54px;height:54px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#fff;font-size:23px;font-weight:900;animation:runningMarkPulse 1s ease-in-out infinite}
+.running-mark{width:54px;height:54px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#fff;animation:runningMarkPulse 1s ease-in-out infinite}
+.running-mark:before{content:"";width:24px;height:24px;border-radius:50%;border:4px solid rgba(255,255,255,.45);border-top-color:#fff;animation:spin .8s linear infinite}
 .running-banner.clean .running-mark{background:var(--color-success)}
 .running-banner.mixed .running-mark{background:var(--color-warning)}
+.running-banner.repair{background:linear-gradient(90deg,#EEF2FF,#FFFFFF);border-color:#A5B4FC}
+.running-banner.repair .running-mark{background:var(--color-primary)}
 .running-title{font-size:25px;font-weight:850;line-height:1.15;color:var(--color-text);margin-bottom:4px}
 .running-sub{font-size:13px;color:var(--color-text-secondary);line-height:1.45}
 .running-dots::after{content:"";display:inline-block;width:32px;text-align:left;animation:runningDots 1.2s steps(4,end) infinite}
 @keyframes runningMarkPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.08);opacity:.78}}
 @keyframes runningDots{0%{content:""}25%{content:"."}50%{content:".."}75%{content:"..."}100%{content:"...."}}
+@keyframes spin{to{transform:rotate(360deg)}}
 
 .teams-card{background:#042C53;border-radius:8px;padding:10px 12px;font-size:11px;color:#B5D4F4;margin-bottom:8px;line-height:1.6}
 .teams-hdr{font-size:10px;font-weight:500;color:#85B7EB;margin-bottom:4px}
@@ -234,7 +238,7 @@ html,body{min-height:100%;background:var(--color-page-bg)}
     <div class="snode s-idle" id="sn-adf"><div class="snode-dot"></div><div class="snode-name">Fabric</div><div class="snode-sub">Ingest</div><div class="snode-progress" id="sp-adf"></div></div>
     <div class="snode s-idle" id="sn-bronze"><div class="snode-dot"></div><div class="snode-name">Bronze</div><div class="snode-sub">Raw landing</div><div class="snode-progress" id="sp-bronze"></div></div>
     <div class="snode s-idle" id="sn-silver"><div class="snode-dot"></div><div class="snode-name">Silver</div><div class="snode-sub">Cleaned</div><div class="snode-progress" id="sp-silver"></div></div>
-    <div class="snode s-idle" id="sn-dq"><div class="snode-dot"></div><div class="snode-name">DQ Check</div><div class="snode-sub">Databricks</div><div class="snode-progress" id="sp-dq"></div></div>
+    <div class="snode s-idle" id="sn-dq"><div class="snode-dot"></div><div class="snode-name">DQ Check</div><div class="snode-sub">Fabric</div><div class="snode-progress" id="sp-dq"></div></div>
     <div class="snode s-idle" id="sn-gate"><div class="snode-dot"></div><div class="snode-name">Quality gate</div><div class="snode-sub">Pass/Fail</div><div class="snode-progress" id="sp-gate"></div></div>
     <div class="snode s-idle" id="sn-ai"><div class="snode-dot"></div><div class="snode-name">AI engine</div><div class="snode-sub">Repair</div><div class="snode-progress" id="sp-ai"></div></div>
     <div class="snode s-idle" id="sn-gold"><div class="snode-dot"></div><div class="snode-name">Gold</div><div class="snode-sub">Business-ready</div><div class="snode-progress" id="sp-gold"></div></div>
@@ -422,10 +426,14 @@ function renderScenarioBWaiting(batchId){
 
 function runningBanner(type,title,text){
   return '<div class="running-banner '+type+' fade-up">'+
-    '<div class="running-mark">↻</div>'+
+    '<div class="running-mark"></div>'+
     '<div><div class="running-title">'+title+'<span class="running-dots"></span></div>'+
     '<div class="running-sub">'+text+'</div></div>'+
     '</div>';
+}
+
+function repairRunningBanner(){
+  return runningBanner('repair','Repairing quarantine data','Rep_s2 is processing the current Scenario B quarantine records and promoting repaired rows to Gold.');
 }
 
 async function loadGoldWebsiteOrders(batchId){
@@ -498,6 +506,7 @@ async function loadQuarantineOrders(options){
   if(options.since)params.set('since',options.since);
   if(options.limit)params.set('limit',String(options.limit));
   if(options.activeOnly!==undefined)params.set('activeOnly',String(options.activeOnly));
+  if(options.runId)params.set('runId',String(options.runId));
   var label=options.since?'current-run active quarantine records':'latest active quarantine records';
   dataLog('Requesting '+label);
   log('Quarantine: Fetching '+label+' from dbo.quarantine_ecomm_orders...','l-info');
@@ -618,7 +627,10 @@ function renderScenarioBAITab(rows){
       '<td>'+fmtValue(r.Quarantine_Timestamp)+'</td>'+
     '</tr>';
   }).join('');
-  t.innerHTML='<div class="alert ai-a fade-up">AI engine activated - '+rows.length+' quarantined records found. Approve starts the repair pipeline for all records.</div>'+
+  var runId=rows[0]&&rows[0].Run_ID?rows[0].Run_ID:'current run';
+  var notRepairable=Math.max(0,(S.scenarioBBadRows||0)-rows.length);
+  t.innerHTML='<div class="alert ai-a fade-up">AI engine activated - '+rows.length+' repairable quarantine record(s) found for Run ID '+fmtValue(runId)+'. Approve starts the repair pipeline for these records.</div>'+
+    (notRepairable>0?'<div class="alert aw fade-up">'+notRepairable+' bad record(s) were detected by Quality Gate but were not returned in the repairable quarantine set. Repair logic for those records is not available in this demo flow.</div>':'')+
     '<div class="card" style="padding:0;overflow:auto"><table class="tbl">'+
     '<thead><tr><th>Order ID</th><th>Price</th><th>Error reason</th><th>Quarantine time</th></tr></thead>'+
     '<tbody>'+body+'</tbody></table></div>'+
@@ -645,7 +657,7 @@ async function approveScenarioB(){
   var buttons=document.querySelectorAll('#tab-ai .bap,#tab-ai .brj');
   buttons.forEach(function(btn){btn.disabled=true;});
   uiLog('Disabled AI action buttons while repair is running');
-  document.getElementById('tab-ai').innerHTML+='<div class="alert ab fade-up" style="margin-top:8px" id="repair-status">Starting Rep_s2 repair pipeline...</div>';
+  document.getElementById('tab-ai').innerHTML+='<div id="repair-status" style="margin-top:12px">'+repairRunningBanner()+'</div>';
 
   try{
     var startResponse=await fetch('/api/run-repair',{method:'POST'});
@@ -659,8 +671,7 @@ async function approveScenarioB(){
     disableBtns(false);
     buttons.forEach(function(btn){btn.disabled=false;});
     log('Repair start failed: '+err.message,'l-err');
-    document.getElementById('repair-status').className='alert af fade-up';
-    document.getElementById('repair-status').innerHTML='<strong>Repair pipeline could not start.</strong><br>'+err.message;
+    document.getElementById('repair-status').innerHTML='<div class="alert af fade-up"><strong>Repair pipeline could not start.</strong><br>'+err.message+'</div>';
   }
 }
 
@@ -683,7 +694,7 @@ async function pollRepairPipeline(jobInstanceId,retryAfter){
       sn('ai','run');sn('gold','run');setProgress(Math.min(96,88+(tick*2)));
       liveUiLog('repair-stage','Updating repair stage indicators');
       setSysStatus('Repair pipeline running');
-      document.getElementById('repair-status').textContent='Rep_s2 repair pipeline running...';
+      document.getElementById('repair-status').innerHTML=repairRunningBanner();
     }else if(status==='Completed'||status==='Succeeded'){
       sn('ai','ok');sn('gold','ok');sn('pbi','ok');setProgress(100);
       setSysDot('ok');setSysStatus('Repair pipeline completed');
@@ -695,8 +706,7 @@ async function pollRepairPipeline(jobInstanceId,retryAfter){
       updateBadges();
       log('Repair pipeline completed. Refreshing repaired Gold records for current run...','l-ok');
       uiLog('Repair completed; switching to repaired data refresh');
-      document.getElementById('repair-status').className='alert ak fade-up';
-      document.getElementById('repair-status').textContent='Rep_s2 completed. Loading repaired records from Gold...';
+      document.getElementById('repair-status').innerHTML='<div class="alert ak fade-up">Rep_s2 completed. Loading repaired records from Gold...</div>';
       var batchId='REPAIR-'+new Date().getTime();
       var goldRows=await loadGoldEcommOrders(batchId,repairedCount);
       S.aiRecs=goldRows.slice(0,repairedCount);
@@ -710,14 +720,13 @@ async function pollRepairPipeline(jobInstanceId,retryAfter){
     }else if(status==='Failed'||status==='Cancelled'||status==='Canceled'){
       sn('ai','err');setSysDot('err');setSysStatus('Repair pipeline '+status);
       log('Repair pipeline '+status+'.','l-err');
-      document.getElementById('repair-status').className='alert af fade-up';
-      document.getElementById('repair-status').textContent='Repair pipeline '+status+'.';
+      document.getElementById('repair-status').innerHTML='<div class="alert af fade-up">Repair pipeline '+status+'.</div>';
       disableBtns(false);
       document.querySelectorAll('#tab-ai .bap,#tab-ai .brj').forEach(function(btn){btn.disabled=false;});
       return;
     }else{
       setSysStatus('Repair status: '+status);
-      document.getElementById('repair-status').textContent='Repair status: '+status;
+      document.getElementById('repair-status').innerHTML=runningBanner('repair','Repair status: '+status,'Rep_s2 is still processing the repair request.');
     }
   }
 }
@@ -811,7 +820,7 @@ async function runCleanBatch(){
   sn('bronze','ok');setProgress(42);
 
   sn('dq','run');
-  log('DQ: Running quality checks on Databricks...','l-info');
+  log('DQ: Running quality checks on Fabric...','l-info');
   await d(300);log('  [1/4] Duplicate detection... PASS','l-ok');
   await d(250);log('  [2/4] Null / invalid fields... PASS','l-ok');
   await d(250);log('  [3/4] Anomaly detection... PASS','l-ok');
@@ -865,7 +874,7 @@ async function runMixedBatch(){
   sn('bronze','ok');setProgress(40);
 
   sn('dq','run');
-  log('DQ: Running quality checks on Databricks...','l-info');
+  log('DQ: Running quality checks on Fabric...','l-info');
   await d(300);log('  [1/4] Duplicate detection... '+bad.filter(function(r){return r.issue==='Duplicate record';}).length+' duplicate(s) found','l-warn');
   await d(250);log('  [2/4] Null / invalid fields... '+bad.filter(function(r){return r.issue&&r.issue.includes('Missing');}).length+' null field(s) found','l-warn');
   await d(250);log('  [3/4] Anomaly detection... '+bad.filter(function(r){return r.issue&&r.issue.includes('anomaly');}).length+' anomalous value(s) found','l-warn');
@@ -1133,12 +1142,14 @@ async function pollScenarioB(batchId,jobInstanceId,retryAfter,runStartedAt){
       S.scenarioBCleanRows=qualityResult?Number(qualityResult.Clean_Rows||0):0;
       S.goldBadgeOverride=S.scenarioBCleanRows;
       S.scenarioBBadRows=expectedBad;
-      var rows=await loadQuarantineOrders({since:runStartedAt,limit:expectedBad||10,activeOnly:true});
+      var rows=await loadQuarantineOrders({since:runStartedAt,limit:Math.max(expectedBad||10,20),activeOnly:true,runId:'latest'});
       if(rows.length>0){
         S.scenarioBRepairInput=rows.slice();
+        var runId=rows[0]&&rows[0].Run_ID?rows[0].Run_ID:'current run';
         sn('ai','ai');setProgress(86);
         document.getElementById('tab-pipeline').innerHTML='<span class="scenario-pill sp-mixed">Scenario B - bad-data batch</span>'+
-          '<div class="alert af fade-up">Quality gate found '+expectedBad+' bad row(s). Loaded '+rows.length+' active quarantine record(s) for this run. Repair is available in the AI Engine tab.</div>';
+          '<div class="alert af fade-up">Quality Gate detected '+expectedBad+' bad row(s). Loaded '+rows.length+' repairable quarantine record(s) for Run ID '+fmtValue(runId)+'. Repair is available in the AI Engine tab.</div>'+
+          (expectedBad>rows.length?'<div class="alert aw fade-up">'+(expectedBad-rows.length)+' detected bad record(s) were not returned in the repairable quarantine set. They will be shown as not repairable in this demo flow.</div>':'');
         renderScenarioBAITab(rows);
         uiLog('Rendered AI Engine tab with quarantine records');
         switchTab('ai');
