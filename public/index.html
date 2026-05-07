@@ -212,6 +212,10 @@ html,body{min-height:100%;background:var(--color-page-bg)}
 .repair-fold summary:after{content:'+';font-size:20px;color:var(--color-text-muted)}
 .repair-fold[open] summary:after{content:'-'}
 .repair-note{font-size:12px;color:var(--color-text-secondary);padding:12px 16px;border-bottom:1px solid var(--color-border)}
+.meta-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
+.meta-item{background:var(--color-surface-alt);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:10px 12px}
+.meta-k{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--color-text-muted);font-weight:750;margin-bottom:3px}
+.meta-v{font-size:12px;color:var(--color-text);font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @media(max-width:1100px){
   .main{grid-template-columns:1fr}
   .left-panel{max-height:360px}
@@ -221,6 +225,7 @@ html,body{min-height:100%;background:var(--color-page-bg)}
   .stage-shell{flex-direction:column}
   .stage-actions{justify-content:flex-start;padding:0 16px 10px;flex-wrap:wrap}
   .repair-summary{grid-template-columns:1fr}
+  .meta-strip{grid-template-columns:1fr}
 }
 </style>
 
@@ -598,7 +603,7 @@ function renderQualityResult(result,label){
   var score=Number(result.Quality_Score_Percentage||0);
   var qualityNote=label==='Repair'
     ? 'Scenario B quality gate detected '+fmtValue(bad)+' bad record(s) before repair. This is the validation result, not the post-repair quarantine status.'
-    : label+' quality gate loaded from dbo.data_quality_results. Table: '+fmtValue(result.Table_Name)+'. Checked: '+fmtValue(result.Check_Timestamp)+'.';
+    : '';
   t.innerHTML=
     '<div class="metric-row">'+
     '<div class="metric"><div class="mv">'+fmtValue(total)+'</div><div class="ml">Total rows</div></div>'+
@@ -606,9 +611,12 @@ function renderQualityResult(result,label){
     '<div class="metric"><div class="mv '+(bad?'c-r':'c-g')+'">'+fmtValue(bad)+'</div><div class="ml">Bad rows</div></div>'+
     '<div class="metric"><div class="mv '+(score>=80?'c-g':score>=60?'c-a':'c-r')+'">'+fmtValue(score)+'%</div><div class="ml">Quality score</div></div>'+
     '</div>'+
-    '<div class="alert '+(bad>0?'aw':'ak')+' fade-up">'+
-    qualityNote+
-    '</div>'+
+    (qualityNote?'<div class="alert '+(bad>0?'aw':'ak')+' fade-up">'+qualityNote+'</div>':
+      '<div class="meta-strip fade-up">'+
+      '<div class="meta-item"><div class="meta-k">Quality table</div><div class="meta-v">dbo.data_quality_results</div></div>'+
+      '<div class="meta-item"><div class="meta-k">Source table</div><div class="meta-v">'+fmtValue(result.Table_Name)+'</div></div>'+
+      '<div class="meta-item"><div class="meta-k">Checked time</div><div class="meta-v">'+fmtValue(result.Check_Timestamp)+'</div></div>'+
+      '</div>')+
     '<div class="card" style="padding:0;overflow:hidden">'+
     '<table class="tbl"><thead><tr><th>Total</th><th>Clean</th><th>Bad</th><th>Duplicates</th><th>Runtime sec</th><th>Runtime min</th><th>Table</th></tr></thead><tbody>'+
     '<tr><td>'+fmtValue(total)+'</td><td>'+fmtValue(clean)+'</td><td>'+fmtValue(bad)+'</td><td>'+fmtValue(duplicates)+'</td><td>'+fmtValue(result.Runtime_Seconds)+'</td><td>'+fmtValue(result.Runtime_Minutes)+'</td><td>'+fmtValue(result.Table_Name)+'</td></tr>'+
@@ -694,7 +702,8 @@ function renderScenarioBAITab(rows){
   }).join('');
   var runId=rows[0]&&rows[0].Run_ID?rows[0].Run_ID:'current run';
   var notRepairable=Math.max(0,(S.scenarioBBadRows||0)-rows.length);
-  t.innerHTML='<div class="alert ai-a fade-up">AI engine activated - '+rows.length+' repairable quarantine record(s) found for Run ID '+fmtValue(runId)+'. Approve starts the repair pipeline for these records.</div>'+
+  log('AI engine: '+rows.length+' repairable quarantine record(s) found for Run ID '+fmtValue(runId)+'.','l-ai');
+  t.innerHTML='<div class="alert ai-a fade-up">AI engine activated. '+(S.scenarioBBadRows||rows.length)+' bad record(s) were detected. Review the quarantined records and approve repair.</div>'+
     (notRepairable>0?'<div class="alert aw fade-up">'+notRepairable+' bad record(s) were detected by Quality Gate but were not returned in the repairable quarantine set. Repair logic for those records is not available in this demo flow.</div>':'')+
     '<div class="card" style="padding:0;overflow:auto"><table class="tbl">'+
     '<thead><tr><th>Order ID</th><th>Price</th><th>Error reason</th><th>Quarantine time</th></tr></thead>'+
@@ -1244,8 +1253,9 @@ async function pollScenarioB(batchId,jobInstanceId,retryAfter,runStartedAt){
         var split=splitRepairRows(rows);
         var repairable=split.unrepaired;
         sn('ai','ai');setProgress(86);
+        log('Scenario B quarantine: Loaded '+repairable.length+' repairable row(s) for Run ID '+fmtValue(runId)+'.','l-info');
         document.getElementById('tab-pipeline').innerHTML='<span class="scenario-pill sp-mixed">Scenario B - bad-data batch</span>'+
-          '<div class="alert af fade-up">Quality Gate detected '+expectedBad+' bad row(s). Loaded '+repairable.length+' repairable quarantine record(s) for Run ID '+fmtValue(runId)+'. Repair is available in the AI Engine tab.</div>'+
+          '<div class="alert af fade-up">Quality Gate detected '+expectedBad+' bad record(s). Open the AI Engine tab to review and approve repair.</div>'+
           (expectedBad>rows.length?'<div class="alert aw fade-up">'+(expectedBad-rows.length)+' detected bad record(s) were not returned in the quarantine set. They will be shown as not repairable in this demo flow.</div>':'');
         renderScenarioBAITab(repairable);
         uiLog('Rendered AI Engine tab with quarantine records');
