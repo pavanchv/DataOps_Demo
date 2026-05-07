@@ -319,7 +319,7 @@ function prog(id,pct){var el=document.getElementById('sp-'+id);if(el)el.style.wi
 async function animProg(id,from,to,ms){var steps=20;var inc=(to-from)/steps;var stepMs=ms/steps;for(var i=0;i<=steps;i++){prog(id,from+inc*i);await d(stepMs/steps);}}
 
 function setProgress(pct){var el=document.getElementById('prog-fill');if(el)el.style.width=pct+'%';}
-function setSysDot(c){var el=document.getElementById('sys-dot');el.style.background=c=='ok'?'#639922':c=='run'?'#378ADD':c=='err'?'#E24B4A':'#639922';}
+function setSysDot(c){var el=document.getElementById('sys-dot');el.style.background=c=='ok'?'#639922':c=='run'?'#378ADD':c=='err'?'#E24B4A':c=='warn'?'#D97706':'#639922';}
 function setSysStatus(t){document.getElementById('sys-status').textContent=t;}
 function updateBadges(){
   document.getElementById('tb-gold').textContent='Gold: '+(S.goldBadgeOverride!==null?S.goldBadgeOverride:S.goldRecs.length);
@@ -434,6 +434,17 @@ function runningBanner(type,title,text){
 
 function repairRunningBanner(){
   return runningBanner('repair','Repairing quarantine data','Rep_s2 is processing the current Scenario B quarantine records and promoting repaired rows to Gold.');
+}
+
+function isTimeoutError(err){
+  return /timed out|timeout/i.test((err&&err.message)||'');
+}
+
+function repairTimeoutPanel(message){
+  return '<div class="alert aw fade-up"><strong>Repair trigger response timed out.</strong><br>'+
+    'Fabric can still accept and complete the repair run even when the website waits too long for the start response. Check the Fabric monitor once, then use the button below after Rep_s2 completes.'+
+    '<div style="margin-top:10px"><button class="bap" onclick="refreshRepairAfterTimeout()">Load repaired Gold records</button></div>'+
+    '<div style="font-size:11px;color:var(--color-text-muted);margin-top:8px">'+fmtValue(message)+'</div></div>';
 }
 
 async function loadGoldWebsiteOrders(batchId){
@@ -648,6 +659,44 @@ function rejectScenarioB(){
   log('AI engine: Repair rejected in website. Quarantine rows unchanged.','l-warn');
 }
 
+async function finalizeRepairDisplay(reason){
+  sn('ai','ok');sn('gold','ok');sn('pbi','ok');setProgress(100);
+  setSysDot('ok');setSysStatus('Repair pipeline completed');
+  var repairedRows=S.scenarioBRepairInput||[];
+  var repairedCount=repairedRows.length||S.scenarioBBadRows||0;
+  S.scenarioBRepairedCount=repairedCount;
+  S.quarRecs=[];
+  S.goldBadgeOverride=(S.scenarioBCleanRows||0)+repairedCount;
+  updateBadges();
+  log('Repair pipeline completed. Refreshing repaired Gold records for current run...','l-ok');
+  uiLog((reason==='timeout'?'Manual timeout recovery':'Repair completed')+'; switching to repaired data refresh');
+  var repairStatus=document.getElementById('repair-status');
+  if(repairStatus)repairStatus.innerHTML='<div class="alert ak fade-up">Rep_s2 completed. Loading repaired records from Gold...</div>';
+  var batchId='REPAIR-'+new Date().getTime();
+  await loadGoldEcommOrders(batchId,repairedCount);
+  S.aiRecs=S.goldRecs.slice(0,repairedCount||S.goldRecs.length);
+  S.scenarioBRepairedCount=Math.max(repairedCount,S.aiRecs.length);
+  S.goldBadgeOverride=(S.scenarioBCleanRows||0)+S.scenarioBRepairedCount;
+  updateBadges();
+  uiLog('Kept Quality Gate as pre-repair Scenario B detection result');
+  document.getElementById('tab-ai').innerHTML='<div class="alert ak fade-up">AI repair completed. '+S.scenarioBRepairedCount+' current-run record(s) were processed and promoted to Gold.</div>';
+  disableBtns(false);
+  switchTab('pipeline');
+  renderPBITab();
+}
+
+async function refreshRepairAfterTimeout(){
+  setSysDot('run');setSysStatus('Loading repaired Gold records');
+  log('UI: Loading repaired records after Fabric timeout warning.','l-ui');
+  try{
+    await finalizeRepairDisplay('timeout');
+  }catch(err){
+    setSysDot('err');setSysStatus('Repair refresh failed');
+    log('Repair refresh failed: '+err.message,'l-err');
+    document.getElementById('tab-ai').innerHTML=repairTimeoutPanel(err.message);
+  }
+}
+
 async function approveScenarioB(){
   uiLog('Approve repair button clicked');
   log('AI engine: Approve repair clicked. Starting Rep_s2 repair pipeline...','l-ai');
@@ -667,6 +716,13 @@ async function approveScenarioB(){
     monitorLog('Started repair pipeline polling');
     await pollRepairPipeline(startData.jobInstanceId,startData.retryAfter||5);
   }catch(err){
+    if(isTimeoutError(err)){
+      sn('ai','run');sn('gold','run');setSysDot('warn');setSysStatus('Repair trigger response timed out');
+      log('Repair trigger response timed out. Fabric may still be running Rep_s2; avoid starting it again until checked.','l-warn');
+      document.getElementById('repair-status').innerHTML=repairTimeoutPanel(err.message);
+      disableBtns(false);
+      return;
+    }
     sn('ai','err');setSysDot('err');setSysStatus('Repair pipeline start failed');
     disableBtns(false);
     buttons.forEach(function(btn){btn.disabled=false;});
@@ -696,26 +752,7 @@ async function pollRepairPipeline(jobInstanceId,retryAfter){
       setSysStatus('Repair pipeline running');
       document.getElementById('repair-status').innerHTML=repairRunningBanner();
     }else if(status==='Completed'||status==='Succeeded'){
-      sn('ai','ok');sn('gold','ok');sn('pbi','ok');setProgress(100);
-      setSysDot('ok');setSysStatus('Repair pipeline completed');
-      var repairedRows=S.scenarioBRepairInput||[];
-      var repairedCount=repairedRows.length||S.scenarioBBadRows||0;
-      S.scenarioBRepairedCount=repairedCount;
-      S.quarRecs=[];
-      S.goldBadgeOverride=(S.scenarioBCleanRows||0)+repairedCount;
-      updateBadges();
-      log('Repair pipeline completed. Refreshing repaired Gold records for current run...','l-ok');
-      uiLog('Repair completed; switching to repaired data refresh');
-      document.getElementById('repair-status').innerHTML='<div class="alert ak fade-up">Rep_s2 completed. Loading repaired records from Gold...</div>';
-      var batchId='REPAIR-'+new Date().getTime();
-      var goldRows=await loadGoldEcommOrders(batchId,repairedCount);
-      S.aiRecs=goldRows.slice(0,repairedCount);
-      updateBadges();
-      uiLog('Kept Quality Gate as pre-repair Scenario B detection result');
-      document.getElementById('tab-ai').innerHTML='<div class="alert ak fade-up">AI repair completed. '+repairedCount+' current-run record(s) were processed and promoted to Gold.</div>';
-      disableBtns(false);
-      switchTab('pipeline');
-      renderPBITab();
+      await finalizeRepairDisplay('poll');
       return;
     }else if(status==='Failed'||status==='Cancelled'||status==='Canceled'){
       sn('ai','err');setSysDot('err');setSysStatus('Repair pipeline '+status);
