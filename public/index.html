@@ -204,6 +204,14 @@ html,body{min-height:100%;background:var(--color-page-bg)}
 .center-state-icon{width:88px;height:88px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--color-success-bg);color:var(--color-success);font-size:56px;font-weight:800;line-height:1;margin-bottom:18px;box-shadow:var(--shadow-sm)}
 .center-state-title{font-size:18px;font-weight:750;margin-bottom:6px}
 .center-state-text{font-size:13px;color:var(--color-text-secondary);max-width:460px;line-height:1.5}
+.repair-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0}
+.repair-summary .metric{padding:16px 12px}
+.repair-fold{border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-surface);margin-top:12px;overflow:hidden}
+.repair-fold summary{cursor:pointer;list-style:none;padding:14px 16px;font-weight:750;color:var(--color-text);display:flex;justify-content:space-between;gap:12px;align-items:center;background:var(--color-surface-alt)}
+.repair-fold summary::-webkit-details-marker{display:none}
+.repair-fold summary:after{content:'+';font-size:20px;color:var(--color-text-muted)}
+.repair-fold[open] summary:after{content:'-'}
+.repair-note{font-size:12px;color:var(--color-text-secondary);padding:12px 16px;border-bottom:1px solid var(--color-border)}
 @media(max-width:1100px){
   .main{grid-template-columns:1fr}
   .left-panel{max-height:360px}
@@ -212,6 +220,7 @@ html,body{min-height:100%;background:var(--color-page-bg)}
   .topbar-actions{align-items:flex-start}
   .stage-shell{flex-direction:column}
   .stage-actions{justify-content:flex-start;padding:0 16px 10px;flex-wrap:wrap}
+  .repair-summary{grid-template-columns:1fr}
 }
 </style>
 
@@ -484,7 +493,7 @@ function renderGoldEcommOrders(batchId,rows,repairCount){
   var repairIds=(S.scenarioBRepairedRows&&S.scenarioBRepairedRows.length?S.scenarioBRepairedRows:S.scenarioBRepairInput||[]).map(rowId).filter(Boolean);
   var shownRows=repairIds.length?rows.filter(function(r){return repairIds.indexOf(String(r.Order_ID||''))>=0;}):(repairCount?rows.slice(0,repairCount):rows);
   if(repairCount&&shownRows.length>repairCount)shownRows=shownRows.slice(0,repairCount);
-  var body=shownRows.map(function(r){
+  var repairedBody=shownRows.map(function(r){
     return '<tr class="rg">'+
       '<td>'+fmtValue(r.Order_ID)+'</td>'+
       '<td>'+fmtValue(r.Transaction_Date)+'</td>'+
@@ -496,17 +505,42 @@ function renderGoldEcommOrders(batchId,rows,repairCount){
       '<td>'+fmtValue(r.Ingestion_Timestamp)+'</td>'+
     '</tr>';
   }).join('');
+  var unrepairedRows=S.scenarioBUnrepairedRows||[];
+  var unrepairedBody=unrepairedRows.map(function(r){
+    return '<tr class="rb">'+
+      '<td>'+fmtValue(r.Order_ID)+'</td>'+
+      '<td>'+fmtValue(r.Price)+'</td>'+
+      '<td>'+fmtValue(r.Error_Reason)+'</td>'+
+      '<td>'+fmtValue(r.Quarantine_Timestamp)+'</td>'+
+      '<td>No repair logic has been added yet.</td>'+
+    '</tr>';
+  }).join('');
 
   var unrepairedCount=(S.scenarioBUnrepairedRows||[]).length;
+  var badCount=(S.scenarioBAllRows&&S.scenarioBAllRows.length)||((repairCount||0)+unrepairedCount);
   t.innerHTML='<span class="scenario-pill sp-clean">Repair completed - Gold layer</span>'+
-    '<div class="alert ak fade-up">Repair completed. Showing '+shownRows.length+' repaired Gold record(s) matched to Scenario B Run ID '+fmtValue(S.scenarioBRunId||'current run')+'.</div>'+
-    (repairCount&&shownRows.length<repairCount?'<div class="alert aw fade-up">Gold returned '+shownRows.length+' matching repaired row(s), but '+repairCount+' record(s) were approved. Add a repair/run id in Gold for exact tracking across every row.</div>':'')+
-    (unrepairedCount?'<div class="alert aw fade-up">'+unrepairedCount+' quarantine row(s) from this run were not repaired. They are not shown in this Gold table.</div>':'')+
-    '<div class="section"><div class="sec-hdr">Batch '+batchId+' - repaired ecomm Gold records</div>'+
-    '<div class="card" style="padding:0;overflow:auto"><table class="tbl" style="min-width:900px">'+
+    '<div class="alert ak fade-up">Repair completed. Out of '+badCount+' bad record(s), '+shownRows.length+' were repaired and '+unrepairedCount+' were not repaired.</div>'+
+    '<div class="repair-summary">'+
+      '<div class="metric"><div class="mv c-r">'+badCount+'</div><div class="ml">Bad records</div></div>'+
+      '<div class="metric"><div class="mv c-g">'+shownRows.length+'</div><div class="ml">Repaired to Gold</div></div>'+
+      '<div class="metric"><div class="mv c-a">'+unrepairedCount+'</div><div class="ml">Not repaired</div></div>'+
+    '</div>'+
+    '<details class="repair-fold" open><summary>Repaired records from Gold ('+shownRows.length+')</summary>'+
+    '<div class="repair-note">These records were repaired by Rep_s2 and retrieved from dbo.gold_ecomm_orders.</div>'+
+    '<div style="padding:0;overflow:auto"><table class="tbl" style="min-width:900px">'+
     '<thead><tr><th>Order ID</th><th>Transaction date</th><th>Product</th><th>Qty</th><th>Price</th><th>Total amount</th><th>Source file</th><th>Ingested</th></tr></thead>'+
-    '<tbody>'+(body||'<tr><td colspan="8" style="text-align:center;color:var(--color-text-muted);padding:14px">No ecomm Gold rows returned.</td></tr>')+'</tbody>'+
-    '</table></div></div>';
+    '<tbody>'+(repairedBody||'<tr><td colspan="8" style="text-align:center;color:var(--color-text-muted);padding:14px">No repaired Gold rows returned.</td></tr>')+'</tbody>'+
+    '</table></div></details>'+
+    '<details class="repair-fold"><summary>Not repaired records from Quarantine ('+unrepairedCount+')</summary>'+
+    '<div class="repair-note">Reason: No repair logic has been added yet for these error types.</div>'+
+    '<div style="padding:0;overflow:auto"><table class="tbl" style="min-width:760px">'+
+    '<thead><tr><th>Order ID</th><th>Price</th><th>Error reason</th><th>Quarantine time</th><th>Reason</th></tr></thead>'+
+    '<tbody>'+(unrepairedBody||'<tr><td colspan="5" style="text-align:center;color:var(--color-text-muted);padding:14px">No unrepaired quarantine rows for this run.</td></tr>')+'</tbody>'+
+    '</table></div></details>';
+}
+
+function renderScenarioACompleteAI(){
+  document.getElementById('tab-ai').innerHTML='<div class="center-state"><div class="center-state-icon">&#10003;</div><div class="center-state-title">No AI repair action needed</div><div class="center-state-text">Scenario A completed as a clean-data flow. No quarantined records require AI repair.</div></div>';
 }
 
 async function loadGoldEcommOrders(batchId,repairCount,since){
@@ -514,19 +548,20 @@ async function loadGoldEcommOrders(batchId,repairCount,since){
   log('Gold: Fetching latest rows from dbo.gold_ecomm_orders...','l-info');
   var params=new URLSearchParams();
   if(since)params.set('since',since);
-  if(repairCount)params.set('limit',String(Math.max(25,repairCount*5)));
+  var repairIds=(S.scenarioBRepairedRows&&S.scenarioBRepairedRows.length?S.scenarioBRepairedRows:S.scenarioBRepairInput||[]).map(rowId).filter(Boolean);
+  if(repairIds.length)params.set('orderIds',repairIds.join(','));
+  if(repairCount)params.set('limit',String(Math.max(100,repairCount*20)));
   var response=await fetch('/api/gold-ecomm-orders'+(params.toString()?'?'+params.toString():''));
   var data=await response.json();
   if(!response.ok||!data.ok)throw new Error(data.error||'Unable to fetch ecomm Gold records');
   var rows=data.rows||[];
-  var repairIds=(S.scenarioBRepairedRows&&S.scenarioBRepairedRows.length?S.scenarioBRepairedRows:S.scenarioBRepairInput||[]).map(rowId).filter(Boolean);
   var matchedRows=repairIds.length?rows.filter(function(r){return repairIds.indexOf(String(r.Order_ID||''))>=0;}):(repairCount?rows.slice(0,repairCount):rows);
   if(repairCount&&matchedRows.length>repairCount)matchedRows=matchedRows.slice(0,repairCount);
   S.goldRecs=matchedRows;
   updateBadges();
-  renderGoldEcommOrders(batchId,rows,repairCount);
+  renderGoldEcommOrders(batchId,matchedRows,repairCount);
   uiLog('Rendered repaired ecomm Gold table');
-  log('Gold: Loaded '+rows.length+' actual records from dbo.gold_ecomm_orders','l-ok');
+  log('Gold: Loaded '+rows.length+' actual repaired record match(es) from dbo.gold_ecomm_orders','l-ok');
   return rows;
 }
 
@@ -699,8 +734,9 @@ async function finalizeRepairDisplay(reason){
   S.goldBadgeOverride=(S.scenarioBCleanRows||0)+S.scenarioBRepairedCount;
   updateBadges();
   uiLog('Kept Quality Gate as pre-repair Scenario B detection result');
-  document.getElementById('tab-ai').innerHTML='<div class="alert ak fade-up">AI repair completed. '+S.scenarioBRepairedCount+' current-run record(s) were repaired and promoted to Gold.</div>'+
-    (S.scenarioBUnrepairedRows.length?'<div class="alert aw fade-up">'+S.scenarioBUnrepairedRows.length+' current-run quarantine row(s) remain unrepaired because repair logic was not available for those error types.</div>':'');
+  var badCount=(S.scenarioBAllRows&&S.scenarioBAllRows.length)||(S.scenarioBRepairedCount+S.scenarioBUnrepairedRows.length);
+  document.getElementById('tab-ai').innerHTML='<div class="alert ak fade-up">AI repair completed. Out of '+badCount+' bad record(s), '+S.scenarioBRepairedCount+' were repaired and '+S.scenarioBUnrepairedRows.length+' were not repaired.</div>'+
+    (S.scenarioBUnrepairedRows.length?'<div class="alert aw fade-up">Not repaired reason: No repair logic has been added yet for those error types.</div>':'');
   disableBtns(false);
   switchTab('pipeline');
   renderPBITab();
@@ -1038,7 +1074,7 @@ async function liveScenarioA(){
   S.goldRecs=[];S.quarRecs=[];S.aiRecs=[];S.decisions={};S.scenarioBStartedAt=null;S.scenarioBRunId=null;S.scenarioBBadRows=0;S.scenarioBCleanRows=0;S.scenarioBAllRows=[];S.scenarioBRepairInput=[];S.scenarioBRepairedRows=[];S.scenarioBUnrepairedRows=[];S.scenarioBRepairedCount=0;S.goldBadgeOverride=null;updateBadges();
   uiLog('Cleared previous scenario state');
   document.getElementById('tab-quality').innerHTML='<div class="alert ab fade-up">Scenario A is running. Latest website quality gate result will load after completion.</div>';
-  document.getElementById('tab-ai').innerHTML='<div class="center-state"><div class="center-state-icon">✓</div><div class="center-state-title">No AI repair action needed</div><div class="center-state-text">Scenario A completed as a clean-data flow. No quarantined records require AI repair.</div></div>';
+  document.getElementById('tab-ai').innerHTML='<div class="alert ab fade-up">Scenario A is running. AI repair check will appear after the pipeline completes.</div>';
   log('--- Scenario A: Starting real Fabric pipeline '+batchId+' ---','l-info');
   setSysDot('run');setSysStatus('Starting Fabric pipeline...');
   setProgress(3);renderScenarioAWaiting(batchId);switchTab('pipeline');
@@ -1111,6 +1147,7 @@ async function pollFabricPipeline(batchId,records,jobInstanceId,retryAfter){
           log('Quality gate fetch failed: '+qErr.message,'l-warn');
           renderQualityTab(batchId,goldRows.map(function(r){return {id:r.Order_ID,src:r.Source_App,amt:r.Net_Amount,issue:null,ok:true};}));
         }
+        renderScenarioACompleteAI();
         renderPBITab();
         setSysStatus('Fabric pipeline completed - Gold data loaded');
       }catch(fetchErr){
