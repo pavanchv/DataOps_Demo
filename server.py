@@ -1,6 +1,7 @@
 import json
 import os
 import re
+import socket
 import subprocess
 import urllib.error
 import urllib.parse
@@ -19,6 +20,7 @@ GOLD_SQL_DATABASE = "LK_Gold"
 SILVER_SQL_ENDPOINT_ID = "43faca69-fb67-49b7-b3b1-be8910c42134"
 SILVER_SQL_DATABASE = "LK_Silver"
 FABRIC_BASE = "https://api.fabric.microsoft.com/v1"
+FABRIC_HTTP_TIMEOUT = int(os.environ.get("FABRIC_HTTP_TIMEOUT", "180"))
 AZ = os.environ.get("AZ_CLI", r"C:\Program Files\Microsoft SDKs\Azure\CLI2\wbin\az.cmd")
 ROOT = Path(__file__).resolve().parent
 PUBLIC = ROOT / "public"
@@ -179,7 +181,7 @@ def fabric_request(url, method="GET", payload=None):
     )
 
     try:
-        with urllib.request.urlopen(request, timeout=60) as response:
+        with urllib.request.urlopen(request, timeout=FABRIC_HTTP_TIMEOUT) as response:
             body = response.read().decode("utf-8")
             parsed = json.loads(body) if body else None
             return response.status, dict(response.headers), parsed
@@ -189,8 +191,19 @@ def fabric_request(url, method="GET", payload=None):
             parsed = json.loads(body) if body else {}
         except json.JSONDecodeError:
             parsed = {"raw": body}
-        detail = parsed.get("message") or parsed.get("errorCode") or json.dumps(parsed)
-        raise RuntimeError(f"Fabric API {error.code}: {detail}")
+        detail_parts = []
+        for key in ("requestId", "errorCode", "message", "moreDetails", "relatedResource"):
+            value = parsed.get(key)
+            if value:
+                detail_parts.append(f"{key}: {value}")
+        if not detail_parts:
+            detail_parts.append(json.dumps(parsed))
+        raise RuntimeError(f"Fabric API {error.code}: " + " | ".join(detail_parts))
+    except (TimeoutError, socket.timeout) as error:
+        raise RuntimeError(
+            f"Fabric API request timed out after {FABRIC_HTTP_TIMEOUT} seconds. "
+            "Fabric may still have accepted the request; check the pipeline monitor before starting it again."
+        ) from error
 
 
 def get_sql_server(endpoint_id):
