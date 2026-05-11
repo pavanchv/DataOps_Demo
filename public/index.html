@@ -260,7 +260,7 @@ html,body{min-height:100%;background:var(--color-page-bg)}
   </div>
   <div class="stage-actions">
     <button class="btn b-blue" id="btn-clean" onclick="runScenario('clean')"><div class="btn-dot" style="background:#BBF7D0"></div>Scenario A - clean batch</button>
-    <button class="btn b-red" id="btn-mixed" onclick="runScenario('mixed')"><div class="btn-dot" style="background:#FED7AA"></div>Scenario B - bad-data batch</button>
+    <button class="btn b-red" id="btn-mixed" onclick="runScenario('mixed')"><div class="btn-dot" style="background:#FED7AA"></div>Scenario B - mixed data batch</button>
   </div>
 </div>
 
@@ -450,8 +450,8 @@ function renderScenarioAWaiting(batchId){
 
 function renderScenarioBWaiting(batchId){
   var t=document.getElementById('tab-pipeline');
-  t.innerHTML='<span class="scenario-pill sp-mixed">Scenario B - bad-data batch</span>'+
-    runningBanner('mixed','Scenario B pipeline is running','Batch '+batchId+' is processing bad-data flow. Quarantine and quality-gate results will load after Fabric completes.')+
+  t.innerHTML='<span class="scenario-pill sp-mixed">Scenario B - mixed data batch</span>'+
+    runningBanner('mixed','Scenario B pipeline is running','Batch '+batchId+' is processing mixed-data flow. Quarantine and quality-gate results will load after Fabric completes.')+
     '<div class="alert ab fade-up">Running Fabric pipeline - batch '+batchId+'. Quarantine rows will load after completion.</div>';
 }
 
@@ -465,6 +465,15 @@ function runningBanner(type,title,text){
 
 function repairRunningBanner(){
   return runningBanner('repair','Repairing quarantine data','Rep_s2 is processing the current Scenario B quarantine records and promoting repaired rows to Gold.');
+}
+
+function setRepairStatus(html){
+  var existingBlocks=document.querySelectorAll('#repair-status');
+  for(var i=1;i<existingBlocks.length;i++)existingBlocks[i].remove();
+  var existing=existingBlocks[0];
+  if(existing){existing.innerHTML=html;return;}
+  var tab=document.getElementById('tab-ai');
+  tab.insertAdjacentHTML('beforeend','<div id="repair-status" style="margin-top:12px">'+html+'</div>');
 }
 
 function isTimeoutError(err){
@@ -521,23 +530,26 @@ function renderGoldEcommOrders(batchId,rows,repairCount){
     '</tr>';
   }).join('');
 
-  var unrepairedCount=(S.scenarioBUnrepairedRows||[]).length;
-  var badCount=(S.scenarioBAllRows&&S.scenarioBAllRows.length)||((repairCount||0)+unrepairedCount);
+  var visibleUnrepairedCount=unrepairedRows.length;
+  var repairedShown=shownRows.length;
+  var badCount=Number(S.scenarioBBadRows||0)||((S.scenarioBAllRows&&S.scenarioBAllRows.length)||((repairCount||0)+visibleUnrepairedCount));
+  var unrepairedCount=Math.max(0,badCount-repairedShown);
+  var missingDetailCount=Math.max(0,unrepairedCount-visibleUnrepairedCount);
   t.innerHTML='<span class="scenario-pill sp-clean">Repair completed - Gold layer</span>'+
-    '<div class="alert ak fade-up">Repair completed. Out of '+badCount+' bad record(s), '+shownRows.length+' were repaired and '+unrepairedCount+' were not repaired.</div>'+
+    '<div class="alert ak fade-up">Repair completed. Out of '+badCount+' bad record(s), '+repairedShown+' were repaired and '+unrepairedCount+' were not repaired.</div>'+
     '<div class="repair-summary">'+
       '<div class="metric"><div class="mv c-r">'+badCount+'</div><div class="ml">Bad records</div></div>'+
-      '<div class="metric"><div class="mv c-g">'+shownRows.length+'</div><div class="ml">Repaired to Gold</div></div>'+
+      '<div class="metric"><div class="mv c-g">'+repairedShown+'</div><div class="ml">Repaired to Gold</div></div>'+
       '<div class="metric"><div class="mv c-a">'+unrepairedCount+'</div><div class="ml">Not repaired</div></div>'+
     '</div>'+
-    '<details class="repair-fold" open><summary>Repaired records from Gold ('+shownRows.length+')</summary>'+
+    '<details class="repair-fold" open><summary>Repaired records from Gold ('+repairedShown+')</summary>'+
     '<div class="repair-note">These records were repaired by Rep_s2 and retrieved from dbo.gold_ecomm_orders.</div>'+
     '<div style="padding:0;overflow:auto"><table class="tbl" style="min-width:900px">'+
     '<thead><tr><th>Order ID</th><th>Transaction date</th><th>Product</th><th>Qty</th><th>Price</th><th>Total amount</th><th>Source file</th><th>Ingested</th></tr></thead>'+
     '<tbody>'+(repairedBody||'<tr><td colspan="8" style="text-align:center;color:var(--color-text-muted);padding:14px">No repaired Gold rows returned.</td></tr>')+'</tbody>'+
     '</table></div></details>'+
     '<details class="repair-fold"><summary>Not repaired records from Quarantine ('+unrepairedCount+')</summary>'+
-    '<div class="repair-note">Reason: No repair logic has been added yet for these error types.</div>'+
+    '<div class="repair-note">Reason: No repair logic has been added yet for these error types.'+(missingDetailCount?' '+missingDetailCount+' additional bad record(s) are counted from Quality Gate but were not returned as repair details for this run.':'')+'</div>'+
     '<div style="padding:0;overflow:auto"><table class="tbl" style="min-width:760px">'+
     '<thead><tr><th>Order ID</th><th>Price</th><th>Error reason</th><th>Quarantine time</th><th>Reason</th></tr></thead>'+
     '<tbody>'+(unrepairedBody||'<tr><td colspan="5" style="text-align:center;color:var(--color-text-muted);padding:14px">No unrepaired quarantine rows for this run.</td></tr>')+'</tbody>'+
@@ -734,18 +746,18 @@ async function finalizeRepairDisplay(reason){
   updateBadges();
   log('Repair result: '+repairedCount+' repaired, '+split.unrepaired.length+' still unrepaired for this run.','l-ai');
   uiLog((reason==='timeout'?'Manual timeout recovery':'Repair completed')+'; switching to repaired data refresh');
-  var repairStatus=document.getElementById('repair-status');
-  if(repairStatus)repairStatus.innerHTML='<div class="alert ak fade-up">Rep_s2 completed. Loading repaired records from Gold...</div>';
+  setRepairStatus('<div class="alert ak fade-up">Rep_s2 completed. Loading repaired records from Gold...</div>');
   var batchId='REPAIR-'+new Date().getTime();
   await loadGoldEcommOrders(batchId,repairedCount);
-  S.aiRecs=S.goldRecs.slice(0,repairedCount||S.goldRecs.length);
-  S.scenarioBRepairedCount=repairedCount;
+  S.aiRecs=S.goldRecs.slice();
+  S.scenarioBRepairedCount=S.goldRecs.length;
   S.goldBadgeOverride=(S.scenarioBCleanRows||0)+S.scenarioBRepairedCount;
   updateBadges();
   uiLog('Kept Quality Gate as pre-repair Scenario B detection result');
-  var badCount=(S.scenarioBAllRows&&S.scenarioBAllRows.length)||(S.scenarioBRepairedCount+S.scenarioBUnrepairedRows.length);
-  document.getElementById('tab-ai').innerHTML='<div class="alert ak fade-up">AI repair completed. Out of '+badCount+' bad record(s), '+S.scenarioBRepairedCount+' were repaired and '+S.scenarioBUnrepairedRows.length+' were not repaired.</div>'+
-    (S.scenarioBUnrepairedRows.length?'<div class="alert aw fade-up">Not repaired reason: No repair logic has been added yet for those error types.</div>':'');
+  var badCount=Number(S.scenarioBBadRows||0)||((S.scenarioBAllRows&&S.scenarioBAllRows.length)||(S.scenarioBRepairedCount+S.scenarioBUnrepairedRows.length));
+  var notRepaired=Math.max(0,badCount-S.scenarioBRepairedCount);
+  document.getElementById('tab-ai').innerHTML='<div class="alert ak fade-up">AI repair completed. Out of '+badCount+' bad record(s), '+S.scenarioBRepairedCount+' were repaired and '+notRepaired+' were not repaired.</div>'+
+    (notRepaired?'<div class="alert aw fade-up">Not repaired reason: No repair logic has been added yet for those error types.</div>':'');
   disableBtns(false);
   switchTab('pipeline');
   renderPBITab();
@@ -772,7 +784,7 @@ async function approveScenarioB(){
   var buttons=document.querySelectorAll('#tab-ai .bap,#tab-ai .brj');
   buttons.forEach(function(btn){btn.disabled=true;});
   uiLog('Disabled AI action buttons while repair is running');
-  document.getElementById('tab-ai').innerHTML+='<div id="repair-status" style="margin-top:12px">'+repairRunningBanner()+'</div>';
+  setRepairStatus(repairRunningBanner());
 
   try{
     var startResponse=await fetch('/api/run-repair',{method:'POST'});
@@ -785,7 +797,7 @@ async function approveScenarioB(){
     if(isTimeoutError(err)){
       sn('ai','run');sn('gold','run');setSysDot('warn');setSysStatus('Repair trigger response timed out');
       log('Repair trigger response timed out. Fabric may still be running Rep_s2; avoid starting it again until checked.','l-warn');
-      document.getElementById('repair-status').innerHTML=repairTimeoutPanel(err.message);
+      setRepairStatus(repairTimeoutPanel(err.message));
       disableBtns(false);
       return;
     }
@@ -793,7 +805,7 @@ async function approveScenarioB(){
     disableBtns(false);
     buttons.forEach(function(btn){btn.disabled=false;});
     log('Repair start failed: '+err.message,'l-err');
-    document.getElementById('repair-status').innerHTML='<div class="alert af fade-up"><strong>Repair pipeline could not start.</strong><br>'+err.message+'</div>';
+    setRepairStatus('<div class="alert af fade-up"><strong>Repair pipeline could not start.</strong><br>'+err.message+'</div>');
   }
 }
 
@@ -816,20 +828,20 @@ async function pollRepairPipeline(jobInstanceId,retryAfter){
       sn('ai','run');sn('gold','run');setProgress(Math.min(96,88+(tick*2)));
       liveUiLog('repair-stage','Updating repair stage indicators');
       setSysStatus('Repair pipeline running');
-      document.getElementById('repair-status').innerHTML=repairRunningBanner();
+      setRepairStatus(repairRunningBanner());
     }else if(status==='Completed'||status==='Succeeded'){
       await finalizeRepairDisplay('poll');
       return;
     }else if(status==='Failed'||status==='Cancelled'||status==='Canceled'){
       sn('ai','err');setSysDot('err');setSysStatus('Repair pipeline '+status);
       log('Repair pipeline '+status+'.','l-err');
-      document.getElementById('repair-status').innerHTML='<div class="alert af fade-up">Repair pipeline '+status+'.</div>';
+      setRepairStatus('<div class="alert af fade-up">Repair pipeline '+status+'.</div>');
       disableBtns(false);
       document.querySelectorAll('#tab-ai .bap,#tab-ai .brj').forEach(function(btn){btn.disabled=false;});
       return;
     }else{
       setSysStatus('Repair status: '+status);
-      document.getElementById('repair-status').innerHTML=runningBanner('repair','Repair status: '+status,'Rep_s2 is still processing the repair request.');
+      setRepairStatus(runningBanner('repair','Repair status: '+status,'Rep_s2 is still processing the repair request.'));
     }
   }
 }
@@ -1185,7 +1197,7 @@ async function liveScenarioB(){
   uiLog('Scenario B button clicked');
   S.goldRecs=[];S.quarRecs=[];S.aiRecs=[];S.decisions={};S.scenarioBStartedAt=runStartedAt;S.scenarioBRunId=null;S.scenarioBBadRows=0;S.scenarioBCleanRows=0;S.scenarioBAllRows=[];S.scenarioBRepairInput=[];S.scenarioBRepairedRows=[];S.scenarioBUnrepairedRows=[];S.scenarioBRepairedCount=0;S.goldBadgeOverride=null;updateBadges();
   uiLog('Cleared previous Scenario A data from UI state');
-  log('--- Scenario B: Starting real Fabric bad-data pipeline '+batchId+' ---','l-warn');
+  log('--- Scenario B: Starting real Fabric mixed-data pipeline '+batchId+' ---','l-warn');
   setSysDot('run');setSysStatus('Starting Scenario B Fabric pipeline...');
   setProgress(3);switchTab('pipeline');
   document.getElementById('tab-quality').innerHTML='<div class="alert ab fade-up">Scenario B is running. Latest ecomm quality gate result will load after completion.</div>';
@@ -1254,7 +1266,7 @@ async function pollScenarioB(batchId,jobInstanceId,retryAfter,runStartedAt){
         var repairable=split.unrepaired;
         sn('ai','ai');setProgress(86);
         log('Scenario B quarantine: Loaded '+repairable.length+' repairable row(s) for Run ID '+fmtValue(runId)+'.','l-info');
-        document.getElementById('tab-pipeline').innerHTML='<span class="scenario-pill sp-mixed">Scenario B - bad-data batch</span>'+
+        document.getElementById('tab-pipeline').innerHTML='<span class="scenario-pill sp-mixed">Scenario B - mixed data batch</span>'+
           '<div class="alert af fade-up">Quality Gate detected '+expectedBad+' bad record(s). Open the AI Engine tab to review and approve repair.</div>'+
           (expectedBad>rows.length?'<div class="alert aw fade-up">'+(expectedBad-rows.length)+' detected bad record(s) were not returned in the quarantine set. They will be shown as not repairable in this demo flow.</div>':'');
         renderScenarioBAITab(repairable);
@@ -1282,4 +1294,5 @@ async function pollScenarioB(batchId,jobInstanceId,retryAfter,runStartedAt){
 runCleanBatch=liveScenarioA;
 runMixedBatch=liveScenarioB;
 </script>
+
 
