@@ -193,12 +193,13 @@ html,body{min-height:100%;background:var(--color-page-bg)}
 .rule-msg{font-size:11px;color:var(--color-text-secondary);margin-top:8px}
 .compare-cell{font-size:12px;line-height:1.45;color:var(--color-text)}
 .compare-cell .muted{display:block;color:var(--color-text-muted);font-size:11px;margin-top:2px}
-.ai-review-layout{display:grid;grid-template-columns:minmax(360px,1.1fr) minmax(420px,.9fr);gap:14px;align-items:start;margin-top:12px}
-.ai-record-panel{border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-surface);overflow:hidden}
+.ai-review-layout{display:grid;grid-template-columns:minmax(420px,1.15fr) minmax(420px,.85fr);gap:14px;align-items:stretch;margin-top:12px}
+.ai-record-panel{border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-surface);overflow:hidden;display:flex;flex-direction:column;min-height:0}
 .ai-record-head{padding:10px 12px;border-bottom:1px solid var(--color-border);background:var(--color-surface-alt);font-size:12px;font-weight:800;color:var(--color-text)}
-.ai-record-scroll{max-height:250px;overflow:auto}
+.ai-record-scroll{height:clamp(420px,calc(100vh - 360px),620px);overflow:auto;flex:1}
 .ai-record-scroll .tbl th{position:sticky;top:0;z-index:1}
 .ai-side-panel{display:flex;flex-direction:column;gap:12px}
+.ai-live-status{margin-bottom:12px}
 .ai-side-panel .rules-panel{margin:0}
 .ai-side-panel .rule-grid{grid-template-columns:repeat(2,1fr)}
 .ai-side-panel .rule-card{padding:9px 10px}
@@ -262,6 +263,7 @@ html,body{min-height:100%;background:var(--color-page-bg)}
   .meta-strip{grid-template-columns:1fr}
   .rule-grid{grid-template-columns:1fr}
   .ai-review-layout{grid-template-columns:1fr}
+  .ai-record-scroll{height:360px}
   .ai-side-panel .rule-grid{grid-template-columns:1fr}
 }
 </style>
@@ -510,7 +512,7 @@ function setRepairStatus(html){
   var existing=existingBlocks[0];
   if(existing){existing.innerHTML=html;return;}
   var tab=document.getElementById('tab-ai');
-  tab.insertAdjacentHTML('beforeend','<div id="repair-status" style="margin-top:12px">'+html+'</div>');
+  tab.insertAdjacentHTML('afterbegin','<div id="repair-status" class="ai-live-status">'+html+'</div>');
 }
 
 function isTimeoutError(err){
