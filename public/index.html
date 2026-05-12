@@ -193,6 +193,19 @@ html,body{min-height:100%;background:var(--color-page-bg)}
 .rule-msg{font-size:11px;color:var(--color-text-secondary);margin-top:8px}
 .compare-cell{font-size:12px;line-height:1.45;color:var(--color-text)}
 .compare-cell .muted{display:block;color:var(--color-text-muted);font-size:11px;margin-top:2px}
+.ai-review-layout{display:grid;grid-template-columns:minmax(360px,1.1fr) minmax(420px,.9fr);gap:14px;align-items:start;margin-top:12px}
+.ai-record-panel{border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-surface);overflow:hidden}
+.ai-record-head{padding:10px 12px;border-bottom:1px solid var(--color-border);background:var(--color-surface-alt);font-size:12px;font-weight:800;color:var(--color-text)}
+.ai-record-scroll{max-height:250px;overflow:auto}
+.ai-record-scroll .tbl th{position:sticky;top:0;z-index:1}
+.ai-side-panel{display:flex;flex-direction:column;gap:12px}
+.ai-side-panel .rules-panel{margin:0}
+.ai-side-panel .rule-grid{grid-template-columns:repeat(2,1fr)}
+.ai-side-panel .rule-card{padding:9px 10px}
+.ai-side-panel .rule-desc{font-size:10px}
+.ai-action-dock{border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-surface-alt);padding:12px}
+.ai-action-title{font-size:13px;font-weight:800;color:var(--color-text);margin-bottom:4px}
+.ai-action-copy{font-size:11px;color:var(--color-text-secondary);line-height:1.45;margin-bottom:10px}
 
 .bar-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
 .bar-lbl{font-size:10px;color:var(--color-text-secondary);min-width:70px}
@@ -248,6 +261,8 @@ html,body{min-height:100%;background:var(--color-page-bg)}
   .repair-summary{grid-template-columns:1fr}
   .meta-strip{grid-template-columns:1fr}
   .rule-grid{grid-template-columns:1fr}
+  .ai-review-layout{grid-template-columns:1fr}
+  .ai-side-panel .rule-grid{grid-template-columns:1fr}
 }
 </style>
 
@@ -785,29 +800,40 @@ function renderScenarioBAITab(rows){
   log('AI engine: '+rows.length+' repairable quarantine record(s) found for Run ID '+fmtValue(runId)+'.','l-ai');
   t.innerHTML='<div class="alert ai-a fade-up">AI engine activated. '+(S.scenarioBBadRows||rows.length)+' bad record(s) were detected. Review the quarantined records and approve repair.</div>'+
     (notRepairable>0?'<div class="alert aw fade-up">'+notRepairable+' bad record(s) were detected by Quality Gate but were not returned in the repairable quarantine set. Repair logic for those records is not available in this demo flow.</div>':'')+
-    '<div class="card" style="padding:0;overflow:auto"><table class="tbl">'+
-    '<thead><tr><th>Order ID</th><th>Price</th><th>Error reason</th><th>Quarantine time</th></tr></thead>'+
-    '<tbody>'+body+'</tbody></table></div>'+
-    '<div class="rules-panel fade-up">'+
-    '<div class="rules-title">Repair rules used by Rep_s2</div>'+
-    '<div class="rules-copy">The repair pipeline applies configured business rules to the quarantined records. Records without a matching rule stay in quarantine for future engineering work.</div>'+
-    '<div class="rule-grid">'+
-      '<div class="rule-card ready"><div class="rule-name">Invalid Total_Amount</div><div class="rule-desc">Recalculate total amount from approved quantity and price values.</div></div>'+
-      '<div class="rule-card ready"><div class="rule-name">Invalid Price</div><div class="rule-desc">Use product reference or accepted pricing logic when available.</div></div>'+
-      '<div class="rule-card ready"><div class="rule-name">Invalid Quantity</div><div class="rule-desc">Apply the accepted quantity correction rule for recoverable rows.</div></div>'+
-      '<div class="rule-card needed"><div class="rule-name">Missing Product</div><div class="rule-desc">No automated repair rule yet. Needs product lookup logic.</div></div>'+
-      '<div class="rule-card needed"><div class="rule-name">Missing Transaction_Date</div><div class="rule-desc">No automated repair rule yet. Needs date recovery logic.</div></div>'+
-      '<div class="rule-card needed"><div class="rule-name">New rule request</div><div class="rule-desc">Capture extra repair ideas during the demo for the data engineering team.</div></div>'+
-    '</div>'+
-    '<div class="rule-request">'+
-      '<textarea class="rule-input" id="rule-request-text" placeholder="Example rule: If Product is missing but SKU is available, derive Product from the SKU master table."></textarea>'+
-      '<button class="rule-submit" type="button" onclick="captureRuleRequest()">Add rule request</button>'+
-      '<div class="rule-msg" id="rule-request-msg">This request will be sent to the Data Engineering team to work on the repair logic.</div>'+
-    '</div>'+
-    '</div>'+
-    '<div class="approval-actions">'+
-    '<button class="repair-primary" onclick="approveScenarioB()">Approve repair</button>'+
-    '<button class="repair-secondary" onclick="rejectScenarioB()">Reject repair</button>'+
+    '<div class="ai-review-layout fade-up">'+
+      '<div class="ai-record-panel">'+
+        '<div class="ai-record-head">Current-run quarantined records ('+rows.length+')</div>'+
+        '<div class="ai-record-scroll"><table class="tbl">'+
+        '<thead><tr><th>Order ID</th><th>Price</th><th>Error reason</th><th>Quarantine time</th></tr></thead>'+
+        '<tbody>'+body+'</tbody></table></div>'+
+      '</div>'+
+      '<div class="ai-side-panel">'+
+        '<div class="rules-panel">'+
+        '<div class="rules-title">Repair rules used by Rep_s2</div>'+
+        '<div class="rules-copy">Configured rules repair recoverable records. Records without a matching rule stay in quarantine for engineering follow-up.</div>'+
+        '<div class="rule-grid">'+
+          '<div class="rule-card ready"><div class="rule-name">Invalid Total_Amount</div><div class="rule-desc">Recalculate from quantity and price.</div></div>'+
+          '<div class="rule-card ready"><div class="rule-name">Invalid Price</div><div class="rule-desc">Use product reference pricing when available.</div></div>'+
+          '<div class="rule-card ready"><div class="rule-name">Invalid Quantity</div><div class="rule-desc">Apply approved quantity correction.</div></div>'+
+          '<div class="rule-card needed"><div class="rule-name">Missing Product</div><div class="rule-desc">Needs product lookup logic.</div></div>'+
+          '<div class="rule-card needed"><div class="rule-name">Missing Transaction_Date</div><div class="rule-desc">Needs date recovery logic.</div></div>'+
+          '<div class="rule-card needed"><div class="rule-name">New rule request</div><div class="rule-desc">Capture extra repair ideas.</div></div>'+
+        '</div>'+
+        '<div class="rule-request">'+
+          '<textarea class="rule-input" id="rule-request-text" placeholder="Example rule: If Product is missing but SKU is available, derive Product from the SKU master table."></textarea>'+
+          '<button class="rule-submit" type="button" onclick="captureRuleRequest()">Add rule request</button>'+
+          '<div class="rule-msg" id="rule-request-msg">This request will be sent to the Data Engineering team to work on the repair logic.</div>'+
+        '</div>'+
+        '</div>'+
+        '<div class="ai-action-dock">'+
+          '<div class="ai-action-title">Approval decision</div>'+
+          '<div class="ai-action-copy">Approve starts Rep_s2 for this mixed-data batch. Reject closes this repair request without changing the quarantine table.</div>'+
+          '<div class="approval-actions">'+
+          '<button class="repair-primary" onclick="approveScenarioB()">Approve repair</button>'+
+          '<button class="repair-secondary" onclick="rejectScenarioB()">Reject repair</button>'+
+          '</div>'+
+        '</div>'+
+      '</div>'+
     '</div>';
 }
 
