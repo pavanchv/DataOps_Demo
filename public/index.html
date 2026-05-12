@@ -172,6 +172,27 @@ html,body{min-height:100%;background:var(--color-page-bg)}
 .bdone{font-size:10px;padding:3px 9px;border-radius:20px;border:none;cursor:default}
 .bdone.ap{background:#EAF3DE;color:#27500A}
 .bdone.rj{background:#F1EFE8;color:#5F5E5A}
+.approval-actions{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:14px}
+.repair-primary,.repair-secondary{border:none;border-radius:10px;padding:13px 22px;font-size:14px;font-weight:800;cursor:pointer;box-shadow:var(--shadow-sm);transition:transform .15s,box-shadow .15s,opacity .15s}
+.repair-primary{background:var(--color-success);color:#fff}
+.repair-primary:hover,.repair-secondary:hover{transform:translateY(-1px);box-shadow:var(--shadow-md)}
+.repair-primary:disabled,.repair-secondary:disabled{opacity:.55;cursor:not-allowed;transform:none}
+.repair-secondary{background:var(--color-surface);color:#A32D2D;border:1px solid #F0B8B8}
+.rules-panel{border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-surface);padding:14px;margin:14px 0}
+.rules-title{font-size:14px;font-weight:800;color:var(--color-text);margin-bottom:4px}
+.rules-copy{font-size:12px;color:var(--color-text-secondary);line-height:1.45;margin-bottom:12px}
+.rule-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.rule-card{border:1px solid var(--color-border);border-radius:var(--radius-md);padding:11px 12px;background:var(--color-surface-alt)}
+.rule-card.ready{border-color:#A7E2B7;background:#F2FBF5}
+.rule-card.needed{border-color:#F6D88A;background:#FFFBEB}
+.rule-name{font-size:12px;font-weight:800;color:var(--color-text);margin-bottom:5px}
+.rule-desc{font-size:11px;color:var(--color-text-secondary);line-height:1.45}
+.rule-request{margin-top:12px;border-top:1px solid var(--color-border);padding-top:12px}
+.rule-input{width:100%;min-height:66px;resize:vertical;border:1px solid var(--color-border);border-radius:var(--radius-md);padding:10px 12px;font:inherit;font-size:12px;color:var(--color-text);background:#fff}
+.rule-submit{margin-top:8px;border:none;border-radius:9px;background:var(--color-primary);color:#fff;font-size:12px;font-weight:800;padding:9px 13px;cursor:pointer}
+.rule-msg{font-size:11px;color:var(--color-text-secondary);margin-top:8px}
+.compare-cell{font-size:12px;line-height:1.45;color:var(--color-text)}
+.compare-cell .muted{display:block;color:var(--color-text-muted);font-size:11px;margin-top:2px}
 
 .bar-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
 .bar-lbl{font-size:10px;color:var(--color-text-secondary);min-width:70px}
@@ -226,6 +247,7 @@ html,body{min-height:100%;background:var(--color-page-bg)}
   .stage-actions{justify-content:flex-start;padding:0 16px 10px;flex-wrap:wrap}
   .repair-summary{grid-template-columns:1fr}
   .meta-strip{grid-template-columns:1fr}
+  .rule-grid{grid-template-columns:1fr}
 }
 </style>
 
@@ -502,6 +524,33 @@ async function loadGoldWebsiteOrders(batchId){
   return rows;
 }
 
+function repairRuleFor(reason){
+  var text=String(reason||'').toLowerCase();
+  if(text.indexOf('total')>=0)return 'Recalculate total amount using quantity and price.';
+  if(text.indexOf('price')>=0)return 'Repair price from product reference logic when available.';
+  if(text.indexOf('quantity')>=0)return 'Apply approved quantity correction logic.';
+  if(text.indexOf('product')>=0)return 'No automated repair rule has been added yet.';
+  if(text.indexOf('transaction')>=0||text.indexOf('date')>=0)return 'No automated repair rule has been added yet.';
+  return 'Rep_s2 evaluates the configured repair rules.';
+}
+
+function fmtRepairBefore(row){
+  return '<div class="compare-cell">'+
+    '<strong>Quarantine:</strong> '+fmtValue(row.Order_ID)+
+    '<span class="muted">Price: '+fmtValue(row.Price)+'</span>'+
+    '<span class="muted">Issue: '+fmtValue(row.Error_Reason)+'</span>'+
+  '</div>';
+}
+
+function fmtRepairAfter(row){
+  if(!row)return '<div class="compare-cell"><strong>Gold:</strong> Not matched<span class="muted">Repair may be flagged but no Gold row was returned for this order.</span></div>';
+  return '<div class="compare-cell">'+
+    '<strong>Gold:</strong> '+fmtValue(row.Order_ID)+
+    '<span class="muted">Product: '+fmtValue(row.Product)+' | Qty: '+fmtValue(row.Quantity)+'</span>'+
+    '<span class="muted">Price: '+fmtValue(row.Price)+' | Total: '+fmtValue(row.Total_Amount)+'</span>'+
+  '</div>';
+}
+
 function renderGoldEcommOrders(batchId,rows,repairCount){
   var t=document.getElementById('tab-pipeline');
   var repairIds=(S.scenarioBRepairedRows&&S.scenarioBRepairedRows.length?S.scenarioBRepairedRows:S.scenarioBRepairInput||[]).map(rowId).filter(Boolean);
@@ -529,6 +578,19 @@ function renderGoldEcommOrders(batchId,rows,repairCount){
       '<td>No repair logic has been added yet.</td>'+
     '</tr>';
   }).join('');
+  var goldById={};
+  shownRows.forEach(function(r){goldById[String(r.Order_ID||'')]=r;});
+  var repairedSourceRows=(S.scenarioBRepairedRows||[]).filter(function(r){return repairIds.indexOf(rowId(r))>=0;});
+  var compareBody=repairedSourceRows.map(function(r){
+    var id=rowId(r);
+    return '<tr class="rg">'+
+      '<td>'+fmtValue(id)+'</td>'+
+      '<td>'+fmtValue(r.Error_Reason)+'</td>'+
+      '<td>'+fmtRepairBefore(r)+'</td>'+
+      '<td>'+fmtRepairAfter(goldById[id])+'</td>'+
+      '<td>'+repairRuleFor(r.Error_Reason)+'</td>'+
+    '</tr>';
+  }).join('');
 
   var visibleUnrepairedCount=unrepairedRows.length;
   var repairedShown=shownRows.length;
@@ -542,6 +604,12 @@ function renderGoldEcommOrders(batchId,rows,repairCount){
       '<div class="metric"><div class="mv c-g">'+repairedShown+'</div><div class="ml">Repaired to Gold</div></div>'+
       '<div class="metric"><div class="mv c-a">'+unrepairedCount+'</div><div class="ml">Not repaired</div></div>'+
     '</div>'+
+    '<details class="repair-fold" open><summary>Before and after repair ('+repairedShown+')</summary>'+
+    '<div class="repair-note">Before values come from the current-run quarantine records that Rep_s2 marked as repaired. After values come from the matching records in dbo.gold_ecomm_orders.</div>'+
+    '<div style="padding:0;overflow:auto"><table class="tbl" style="min-width:1100px">'+
+    '<thead><tr><th>Order ID</th><th>Issue found</th><th>Before repair</th><th>After repair</th><th>Rule applied</th></tr></thead>'+
+    '<tbody>'+(compareBody||'<tr><td colspan="5" style="text-align:center;color:var(--color-text-muted);padding:14px">No repaired quarantine records matched to Gold for this run.</td></tr>')+'</tbody>'+
+    '</table></div></details>'+
     '<details class="repair-fold" open><summary>Repaired records from Gold ('+repairedShown+')</summary>'+
     '<div class="repair-note">These records were repaired by Rep_s2 and retrieved from dbo.gold_ecomm_orders.</div>'+
     '<div style="padding:0;overflow:auto"><table class="tbl" style="min-width:900px">'+
@@ -720,14 +788,43 @@ function renderScenarioBAITab(rows){
     '<div class="card" style="padding:0;overflow:auto"><table class="tbl">'+
     '<thead><tr><th>Order ID</th><th>Price</th><th>Error reason</th><th>Quarantine time</th></tr></thead>'+
     '<tbody>'+body+'</tbody></table></div>'+
-    '<div class="ai-acts" style="padding-top:8px">'+
-    '<button class="bap" onclick="approveScenarioB()">Approve repair</button>'+
-    '<button class="brj" onclick="rejectScenarioB()">Reject</button>'+
+    '<div class="rules-panel fade-up">'+
+    '<div class="rules-title">Repair rules used by Rep_s2</div>'+
+    '<div class="rules-copy">The repair pipeline applies configured business rules to the quarantined records. Records without a matching rule stay in quarantine for future engineering work.</div>'+
+    '<div class="rule-grid">'+
+      '<div class="rule-card ready"><div class="rule-name">Invalid Total_Amount</div><div class="rule-desc">Recalculate total amount from approved quantity and price values.</div></div>'+
+      '<div class="rule-card ready"><div class="rule-name">Invalid Price</div><div class="rule-desc">Use product reference or accepted pricing logic when available.</div></div>'+
+      '<div class="rule-card ready"><div class="rule-name">Invalid Quantity</div><div class="rule-desc">Apply the accepted quantity correction rule for recoverable rows.</div></div>'+
+      '<div class="rule-card needed"><div class="rule-name">Missing Product</div><div class="rule-desc">No automated repair rule yet. Needs product lookup logic.</div></div>'+
+      '<div class="rule-card needed"><div class="rule-name">Missing Transaction_Date</div><div class="rule-desc">No automated repair rule yet. Needs date recovery logic.</div></div>'+
+      '<div class="rule-card needed"><div class="rule-name">New rule request</div><div class="rule-desc">Capture extra repair ideas during the demo for the data engineering team.</div></div>'+
+    '</div>'+
+    '<div class="rule-request">'+
+      '<textarea class="rule-input" id="rule-request-text" placeholder="Example rule: If Product is missing but SKU is available, derive Product from the SKU master table."></textarea>'+
+      '<button class="rule-submit" type="button" onclick="captureRuleRequest()">Add rule request</button>'+
+      '<div class="rule-msg" id="rule-request-msg">This request will be sent to the Data Engineering team to work on the repair logic.</div>'+
+    '</div>'+
+    '</div>'+
+    '<div class="approval-actions">'+
+    '<button class="repair-primary" onclick="approveScenarioB()">Approve repair</button>'+
+    '<button class="repair-secondary" onclick="rejectScenarioB()">Reject repair</button>'+
     '</div>';
 }
 
+function captureRuleRequest(){
+  var box=document.getElementById('rule-request-text');
+  var msg=document.getElementById('rule-request-msg');
+  var value=(box&&box.value||'').trim();
+  if(!value){
+    msg.textContent='Add one example repair rule above. It will be sent to the Data Engineering team to build the logic.';
+    return;
+  }
+  msg.textContent='Rule request captured for Data Engineering: "'+value+'"';
+  uiLog('Captured repair rule request for Data Engineering');
+}
+
 function rejectScenarioB(){
-  var buttons=document.querySelectorAll('#tab-ai .bap,#tab-ai .brj');
+  var buttons=document.querySelectorAll('#tab-ai .bap,#tab-ai .brj,#tab-ai .repair-primary,#tab-ai .repair-secondary');
   buttons.forEach(function(btn){btn.disabled=true;});
   setSysStatus('Repair rejected');
   document.getElementById('tab-ai').innerHTML='<div class="alert aw fade-up">Repair rejected for this Scenario B run. Approval options are now closed.</div>';
@@ -781,7 +878,7 @@ async function approveScenarioB(){
   setSysDot('run');setSysStatus('Starting repair pipeline Rep_s2');
   sn('ai','run');setProgress(88);
   disableBtns(true);
-  var buttons=document.querySelectorAll('#tab-ai .bap,#tab-ai .brj');
+  var buttons=document.querySelectorAll('#tab-ai .bap,#tab-ai .brj,#tab-ai .repair-primary,#tab-ai .repair-secondary');
   buttons.forEach(function(btn){btn.disabled=true;});
   uiLog('Disabled AI action buttons while repair is running');
   setRepairStatus(repairRunningBanner());
@@ -837,7 +934,7 @@ async function pollRepairPipeline(jobInstanceId,retryAfter){
       log('Repair pipeline '+status+'.','l-err');
       setRepairStatus('<div class="alert af fade-up">Repair pipeline '+status+'.</div>');
       disableBtns(false);
-      document.querySelectorAll('#tab-ai .bap,#tab-ai .brj').forEach(function(btn){btn.disabled=false;});
+      document.querySelectorAll('#tab-ai .bap,#tab-ai .brj,#tab-ai .repair-primary,#tab-ai .repair-secondary').forEach(function(btn){btn.disabled=false;});
       return;
     }else{
       setSysStatus('Repair status: '+status);
