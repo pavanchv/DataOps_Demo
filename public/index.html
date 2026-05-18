@@ -318,12 +318,14 @@ html,body{min-height:100%;background:var(--color-page-bg)}
       <div class="rtab active" onclick="switchTab('pipeline')">Pipeline</div>
       <div class="rtab" onclick="switchTab('quality')">Quality gate</div>
       <div class="rtab" onclick="switchTab('ai')">AI engine</div>
+      <div class="rtab" onclick="switchTab('catalogue')">Repair Catalogue</div>
       <div class="rtab" onclick="switchTab('pbi')">Power BI</div>
     </div>
     <div class="content-area" id="content-area">
       <div id="tab-pipeline"><div style="font-size:12px;color:var(--color-text-muted);padding:20px 0">Select a scenario on the left to start the automated demo. Watch each stage activate in real time across all four tabs.</div></div>
       <div id="tab-quality" style="display:none"></div>
       <div id="tab-ai" style="display:none"></div>
+      <div id="tab-catalogue" style="display:none"></div>
       <div id="tab-pbi" style="display:none"></div>
     </div>
   </div>
@@ -401,7 +403,7 @@ function splitRepairRows(rows){
 function switchTab(t){
   activeTab=t;
   document.querySelectorAll('.rtab').forEach(function(el,i){el.classList.remove('active');});
-  var tabs=['pipeline','quality','ai','pbi'];
+  var tabs=['pipeline','quality','ai','catalogue','pbi'];
   tabs.forEach(function(id,i){
     if(id===t)document.querySelectorAll('.rtab')[i].classList.add('active');
     document.getElementById('tab-'+id).style.display=id===t?'block':'none';
@@ -494,6 +496,23 @@ function renderScenarioBWaiting(batchId){
     '<div class="alert ab fade-up">Running Fabric pipeline - batch '+batchId+'. Quarantine rows will load after completion.</div>';
 }
 
+function renderPipelineFailure(scenario,batchId,status,reason){
+  var isB=scenario==='B';
+  var pill=isB?'<span class="scenario-pill sp-mixed">Scenario B - mixed data batch</span>':'<span class="scenario-pill sp-clean">Scenario A - clean batch</span>';
+  var title=isB?'Scenario B pipeline failed':'Scenario A pipeline failed';
+  var cleanReason=fmtValue(reason||'Fabric did not return a detailed reason. Open the Fabric monitor for full run details.');
+  document.getElementById('tab-pipeline').innerHTML=pill+
+    '<div class="alert af fade-up"><strong>'+title+'</strong><br>Batch '+batchId+' ended with status: '+fmtValue(status)+'.</div>'+
+    '<div class="section"><div class="sec-hdr">Failure details</div>'+
+      '<div class="card">'+
+        '<div style="font-size:14px;font-weight:800;color:#A32D2D;margin-bottom:6px">Pipeline run did not complete successfully.</div>'+
+        '<div style="font-size:12px;color:var(--color-text-secondary);line-height:1.6">The live Fabric status has stopped. The running animation has been removed so the demo clearly shows that this run failed.</div>'+
+        '<div class="alert af fade-up" style="margin:12px 0 0"><strong>Error reason:</strong><br>'+cleanReason+'</div>'+
+      '</div>'+
+    '</div>';
+  document.getElementById('tab-ai').innerHTML='<div class="alert af fade-up">'+title+'. AI repair will not start until the pipeline reaches the quality gate and quarantine step.</div>';
+}
+
 function runningBanner(type,title,text){
   return '<div class="running-banner '+type+' fade-up">'+
     '<div class="running-mark"></div>'+
@@ -551,6 +570,12 @@ function repairRuleFor(reason){
   return 'Rep_s2 evaluates the configured repair rules.';
 }
 
+function repairConfidenceFor(reason,matchedGold){
+  var rule=repairRuleFor(reason);
+  if(rule.indexOf('No automated repair rule')>=0)return 'Pending rule';
+  return matchedGold?'100%':'Needs review';
+}
+
 function fmtRepairBefore(row){
   return '<div class="compare-cell">'+
     '<strong>Quarantine:</strong> '+fmtValue(row.Order_ID)+
@@ -600,12 +625,14 @@ function renderGoldEcommOrders(batchId,rows,repairCount){
   var repairedSourceRows=(S.scenarioBRepairedRows||[]).filter(function(r){return repairIds.indexOf(rowId(r))>=0;});
   var compareBody=repairedSourceRows.map(function(r){
     var id=rowId(r);
+    var matchedGold=goldById[id];
     return '<tr class="rg">'+
       '<td>'+fmtValue(id)+'</td>'+
       '<td>'+fmtValue(r.Error_Reason)+'</td>'+
       '<td>'+fmtRepairBefore(r)+'</td>'+
-      '<td>'+fmtRepairAfter(goldById[id])+'</td>'+
+      '<td>'+fmtRepairAfter(matchedGold)+'</td>'+
       '<td>'+repairRuleFor(r.Error_Reason)+'</td>'+
+      '<td><span class="badge bk">'+repairConfidenceFor(r.Error_Reason,matchedGold)+'</span></td>'+
     '</tr>';
   }).join('');
 
@@ -624,8 +651,8 @@ function renderGoldEcommOrders(batchId,rows,repairCount){
     '<details class="repair-fold" open><summary>Before and after repair ('+repairedShown+')</summary>'+
     '<div class="repair-note">Before values come from the current-run quarantine records that Rep_s2 marked as repaired. After values come from the matching records in dbo.gold_ecomm_orders.</div>'+
     '<div style="padding:0;overflow:auto"><table class="tbl" style="min-width:1100px">'+
-    '<thead><tr><th>Order ID</th><th>Issue found</th><th>Before repair</th><th>After repair</th><th>Rule applied</th></tr></thead>'+
-    '<tbody>'+(compareBody||'<tr><td colspan="5" style="text-align:center;color:var(--color-text-muted);padding:14px">No repaired quarantine records matched to Gold for this run.</td></tr>')+'</tbody>'+
+    '<thead><tr><th>Order ID</th><th>Issue found</th><th>Before repair</th><th>After repair</th><th>Rule applied</th><th>Confidence</th></tr></thead>'+
+    '<tbody>'+(compareBody||'<tr><td colspan="6" style="text-align:center;color:var(--color-text-muted);padding:14px">No repaired quarantine records matched to Gold for this run.</td></tr>')+'</tbody>'+
     '</table></div></details>'+
     '<details class="repair-fold" open><summary>Repaired records from Gold ('+repairedShown+')</summary>'+
     '<div class="repair-note">These records were repaired by Rep_s2 and retrieved from dbo.gold_ecomm_orders.</div>'+
@@ -643,6 +670,37 @@ function renderGoldEcommOrders(batchId,rows,repairCount){
 
 function renderScenarioACompleteAI(){
   document.getElementById('tab-ai').innerHTML='<div class="center-state"><div class="center-state-icon">&#10003;</div><div class="center-state-title">No AI repair action needed</div><div class="center-state-text">Scenario A completed as a clean-data flow. No quarantined records require AI repair.</div></div>';
+}
+
+function renderRepairCatalogue(){
+  var rules=[
+    ['Invalid Total_Amount','Active','Recalculate total amount using Quantity x Price after standardization.','100%'],
+    ['Invalid Price','Active','Use product reference pricing when the source price is invalid or missing.','100%'],
+    ['Invalid Quantity','Active','Apply approved quantity correction logic for recoverable order rows.','100%'],
+    ['Missing Product','Needs engineering','Add lookup logic from SKU, catalogue, or product master data.','Pending'],
+    ['Missing Transaction_Date','Needs engineering','Add recovery logic from source file date, ingestion date, or order metadata.','Pending'],
+    ['New exception type','Draft','Capture new repair ideas during demo and send them to Data Engineering.','Pending']
+  ];
+  var rows=rules.map(function(r){
+    var cls=r[1]==='Active'?'bk':r[1]==='Needs engineering'?'bg':'bai';
+    return '<tr><td><strong>'+r[0]+'</strong></td><td><span class="badge '+cls+'">'+r[1]+'</span></td><td>'+r[2]+'</td><td>'+r[3]+'</td></tr>';
+  }).join('');
+  document.getElementById('tab-catalogue').innerHTML=
+    '<div class="section">'+
+      '<div class="sec-hdr">Repair rule catalogue</div>'+
+      '<div class="alert ab fade-up">This catalogue shows the governed repair logic available to Rep_s2. Active rules are deterministic business rules, so the confidence is normally 100% and fully auditable.</div>'+
+      '<div class="card" style="padding:0;overflow:auto"><table class="tbl" style="min-width:900px">'+
+      '<thead><tr><th>Rule</th><th>Status</th><th>Repair logic</th><th>Confidence</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
+    '</div>'+
+    '<div class="rules-panel fade-up">'+
+      '<div class="rules-title">Request a new repair rule</div>'+
+      '<div class="rules-copy">Use this during the demo when a business team wants a new exception to be handled automatically in future pipeline runs.</div>'+
+      '<div class="rule-request" style="border-top:none;padding-top:0">'+
+        '<textarea class="rule-input" id="rule-request-text" placeholder="Example rule: If Product is missing but SKU is available, derive Product from the SKU master table."></textarea>'+
+        '<button class="rule-submit" type="button" onclick="captureRuleRequest()">Add rule request</button>'+
+        '<div class="rule-msg" id="rule-request-msg">This request will be sent to the Data Engineering team to work on the repair logic.</div>'+
+      '</div>'+
+    '</div>';
 }
 
 async function loadGoldEcommOrders(batchId,repairCount,since){
@@ -810,23 +868,6 @@ function renderScenarioBAITab(rows){
         '<tbody>'+body+'</tbody></table></div>'+
       '</div>'+
       '<div class="ai-side-panel">'+
-        '<div class="rules-panel">'+
-        '<div class="rules-title">Repair rules used by Rep_s2</div>'+
-        '<div class="rules-copy">Configured rules repair recoverable records. Records without a matching rule stay in quarantine for engineering follow-up.</div>'+
-        '<div class="rule-grid">'+
-          '<div class="rule-card ready"><div class="rule-name">Invalid Total_Amount</div><div class="rule-desc">Recalculate from quantity and price.</div></div>'+
-          '<div class="rule-card ready"><div class="rule-name">Invalid Price</div><div class="rule-desc">Use product reference pricing when available.</div></div>'+
-          '<div class="rule-card ready"><div class="rule-name">Invalid Quantity</div><div class="rule-desc">Apply approved quantity correction.</div></div>'+
-          '<div class="rule-card needed"><div class="rule-name">Missing Product</div><div class="rule-desc">Needs product lookup logic.</div></div>'+
-          '<div class="rule-card needed"><div class="rule-name">Missing Transaction_Date</div><div class="rule-desc">Needs date recovery logic.</div></div>'+
-          '<div class="rule-card needed"><div class="rule-name">New rule request</div><div class="rule-desc">Capture extra repair ideas.</div></div>'+
-        '</div>'+
-        '<div class="rule-request">'+
-          '<textarea class="rule-input" id="rule-request-text" placeholder="Example rule: If Product is missing but SKU is available, derive Product from the SKU master table."></textarea>'+
-          '<button class="rule-submit" type="button" onclick="captureRuleRequest()">Add rule request</button>'+
-          '<div class="rule-msg" id="rule-request-msg">This request will be sent to the Data Engineering team to work on the repair logic.</div>'+
-        '</div>'+
-        '</div>'+
         '<div class="ai-action-dock">'+
           '<div class="ai-action-title">Approval decision</div>'+
           '<div class="ai-action-copy">Approve starts Rep_s2 for this mixed-data batch. Reject closes this repair request without changing the quarantine table.</div>'+
@@ -835,6 +876,7 @@ function renderScenarioBAITab(rows){
           '<button class="repair-secondary" onclick="rejectScenarioB()">Reject repair</button>'+
           '</div>'+
         '</div>'+
+        '<div class="alert ab fade-up">Repair rules are maintained in the Repair Catalogue tab. Use that tab to explain active rules and capture new rule requests.</div>'+
       '</div>'+
     '</div>';
 }
@@ -946,7 +988,8 @@ async function pollRepairPipeline(jobInstanceId,retryAfter){
     var response=await fetch('/api/pipeline-status?pipelineId='+encodeURIComponent(PIPELINES.repair)+'&jobInstanceId='+encodeURIComponent(jobInstanceId));
     var data=await response.json();
     if(!response.ok||!data.ok)throw new Error(data.error||'Unable to read repair pipeline status');
-    var status=(data.job&&data.job.status)||'Unknown';
+    var job=data.job||{};
+    var status=job.status||job.state||'Unknown';
     if(status!==seenStatus){log('Repair pipeline live status: '+status,'l-info');seenStatus=status;waitingLogged=false;}
 
     if(status==='InProgress'||status==='Running'||status==='NotStarted'||status==='Queued'){
@@ -1202,6 +1245,7 @@ function hardReset(){
   document.getElementById('tab-pipeline').innerHTML='<div style="font-size:12px;color:var(--color-text-muted);padding:20px 0">Select a scenario on the left to start the automated demo.</div>';
   document.getElementById('tab-quality').innerHTML='';
   document.getElementById('tab-ai').innerHTML='';
+  renderRepairCatalogue();
   document.getElementById('tab-pbi').innerHTML='';
   switchTab('pipeline');
   log('System reset. Ready to run.','l-dim');
@@ -1211,8 +1255,9 @@ updateBadges();log('System initialised. Azure DataOps pipeline ready.','l-ok');
 log('Select Scenario A or Scenario B to start a live Fabric pipeline.','l-dim');
 switchTab('pipeline');
 document.querySelectorAll('.rtab').forEach(function(el,i){el.style.display='flex';});
-['tab-pipeline','tab-quality','tab-ai','tab-pbi'].forEach(function(id){document.getElementById(id).style.display='none';});
+['tab-pipeline','tab-quality','tab-ai','tab-catalogue','tab-pbi'].forEach(function(id){document.getElementById(id).style.display='none';});
 document.getElementById('tab-pipeline').style.display='block';
+renderRepairCatalogue();
 renderPowerBIReport();
 async function liveScenarioA(){
   var records=CLEAN;S.batches++;var batchId='LIVE-'+(4820+S.batches);
@@ -1307,7 +1352,7 @@ async function pollFabricPipeline(batchId,records,jobInstanceId,retryAfter){
       setSysDot('err');setSysStatus('Fabric pipeline '+status);
       var failure=(job.failureReason&&JSON.stringify(job.failureReason))||job.message||'Open Fabric monitor for details.';
       log('Fabric pipeline '+status+': '+failure,'l-err');
-      document.getElementById('tab-pipeline').innerHTML='<div class="alert af fade-up"><strong>Fabric pipeline '+status+'.</strong><br>'+failure+'</div>';
+      renderPipelineFailure('A',batchId,status,failure);
       return;
     }else{
       sn('adf','run');setProgress(Math.min(75,10+(tick*5)));
@@ -1407,7 +1452,9 @@ async function pollScenarioB(batchId,jobInstanceId,retryAfter,runStartedAt){
     }else if(status==='Failed'||status==='Cancelled'||status==='Canceled'){
       sn('dq','err');sn('gate','err');setProgress(58);
       setSysDot('err');setSysStatus('Scenario B pipeline '+status);
-      log('Scenario B pipeline '+status+'.','l-err');
+      var failure=(job.failureReason&&JSON.stringify(job.failureReason))||job.message||'Open Fabric monitor for details.';
+      log('Scenario B pipeline '+status+': '+failure,'l-err');
+      renderPipelineFailure('B',batchId,status,failure);
       return;
     }else{
       sn('adf','run');setProgress(Math.min(75,10+(tick*5)));
