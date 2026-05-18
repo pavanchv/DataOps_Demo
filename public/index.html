@@ -60,9 +60,9 @@ html,body{min-height:100%;background:var(--color-page-bg)}
 .snode-progress{position:absolute;bottom:0;left:12px;height:3px;background:var(--color-primary);width:0;transition:width .1s linear;border-radius:3px}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 
-.main{display:grid;grid-template-columns:340px minmax(0,1fr);gap:16px;padding:16px;min-height:calc(100vh - 154px)}
+.main{display:grid;grid-template-columns:340px minmax(0,1fr);gap:16px;padding:16px;height:calc(100vh - 154px);min-height:0}
 .left-panel{min-width:0;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);box-shadow:var(--shadow-sm);display:flex;flex-direction:column;overflow:hidden;max-height:calc(100vh - 190px)}
-.right-panel{min-width:0;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);box-shadow:var(--shadow-sm);display:flex;flex-direction:column;overflow:hidden}
+.right-panel{min-width:0;min-height:0;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);box-shadow:var(--shadow-sm);display:flex;flex-direction:column;overflow:hidden}
 
 .panel-hdr{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--color-text-secondary);padding:12px 16px;border-bottom:1px solid var(--color-border);background:var(--color-surface-alt)}
 
@@ -100,7 +100,7 @@ html,body{min-height:100%;background:var(--color-page-bg)}
 @keyframes btnPulseMixed{0%,100%{box-shadow:0 0 0 0 rgba(217,119,6,.42)}50%{box-shadow:0 0 0 7px rgba(217,119,6,0)}}
 @keyframes dotPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.55);opacity:.55}}
 
-.content-area{flex:1;overflow-y:auto;padding:18px;max-height:none;background:var(--color-surface)}
+.content-area{flex:1;min-height:0;overflow-y:auto;padding:18px;max-height:none;background:var(--color-surface)}
 
 .section{margin-bottom:14px}
 .sec-hdr{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-secondary);margin-bottom:10px}
@@ -193,12 +193,13 @@ html,body{min-height:100%;background:var(--color-page-bg)}
 .rule-msg{font-size:11px;color:var(--color-text-secondary);margin-top:8px}
 .compare-cell{font-size:12px;line-height:1.45;color:var(--color-text)}
 .compare-cell .muted{display:block;color:var(--color-text-muted);font-size:11px;margin-top:2px}
-.ai-review-layout{display:grid;grid-template-columns:minmax(420px,1.15fr) minmax(420px,.85fr);gap:14px;align-items:stretch;margin-top:12px}
+#tab-ai{height:100%;overflow:hidden}
+.ai-review-layout{height:calc(100% - 70px);min-height:0;display:grid;grid-template-columns:minmax(420px,1.15fr) minmax(420px,.85fr);gap:14px;align-items:stretch;margin-top:12px}
 .ai-record-panel{border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-surface);overflow:hidden;display:flex;flex-direction:column;min-height:0}
 .ai-record-head{padding:10px 12px;border-bottom:1px solid var(--color-border);background:var(--color-surface-alt);font-size:12px;font-weight:800;color:var(--color-text)}
-.ai-record-scroll{height:clamp(420px,calc(100vh - 360px),620px);overflow:auto;flex:1}
+.ai-record-scroll{overflow:auto;flex:1;min-height:0}
 .ai-record-scroll .tbl th{position:sticky;top:0;z-index:1}
-.ai-side-panel{display:flex;flex-direction:column;gap:12px}
+.ai-side-panel{display:flex;flex-direction:column;gap:12px;min-height:0;overflow:auto}
 .ai-live-status{margin-bottom:12px}
 .ai-side-panel .rules-panel{margin:0}
 .ai-side-panel .rule-grid{grid-template-columns:repeat(2,1fr)}
@@ -207,6 +208,15 @@ html,body{min-height:100%;background:var(--color-page-bg)}
 .ai-action-dock{border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-surface-alt);padding:12px}
 .ai-action-title{font-size:13px;font-weight:800;color:var(--color-text);margin-bottom:4px}
 .ai-action-copy{font-size:11px;color:var(--color-text-secondary);line-height:1.45;margin-bottom:10px}
+.rule-coverage{border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-surface);padding:12px}
+.rule-coverage-title{font-size:13px;font-weight:800;color:var(--color-text);margin-bottom:4px}
+.rule-coverage-copy{font-size:11px;color:var(--color-text-secondary);line-height:1.45;margin-bottom:10px}
+.rule-chip-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.rule-chip{border:1px solid var(--color-border);border-radius:8px;padding:9px 10px;background:var(--color-surface-alt)}
+.rule-chip.active{border-color:#A7E2B7;background:#F2FBF5}
+.rule-chip.missing{border-color:#F6D88A;background:#FFFBEB}
+.rule-chip-name{font-size:11px;font-weight:800;color:var(--color-text);margin-bottom:3px}
+.rule-chip-meta{font-size:10px;color:var(--color-text-secondary)}
 
 .bar-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
 .bar-lbl{font-size:10px;color:var(--color-text-secondary);min-width:70px}
@@ -263,7 +273,10 @@ html,body{min-height:100%;background:var(--color-page-bg)}
   .meta-strip{grid-template-columns:1fr}
   .rule-grid{grid-template-columns:1fr}
   .ai-review-layout{grid-template-columns:1fr}
-  .ai-record-scroll{height:360px}
+  #tab-ai{height:auto;overflow:visible}
+  .ai-review-layout{height:auto}
+  .ai-record-scroll{max-height:360px}
+  .rule-chip-row{grid-template-columns:1fr}
   .ai-side-panel .rule-grid{grid-template-columns:1fr}
 }
 </style>
@@ -841,6 +854,27 @@ function renderAITab(quarRecs,phase){
     (allDone?'<div class="alert ak fade-up" id="ai-ready-msg">'+apCount+' record(s) approved. <strong>'+quarRecs.filter(function(r){return S.decisions[r.id]==='rj';}).length+'</strong> rejected (remain quarantined).</div><button class="btn b-purple fade-up" style="width:auto" onclick="sendToGold()">Send approved records to Gold -></button>':'');
 }
 
+function ruleCoveragePanel(rows){
+  var rules=[
+    {name:'Invalid Total_Amount',needle:'total',active:true},
+    {name:'Invalid Price',needle:'price',active:true},
+    {name:'Invalid Quantity',needle:'quantity',active:true},
+    {name:'Missing Product',needle:'product',active:false},
+    {name:'Missing Transaction_Date',needle:'transaction',active:false}
+  ];
+  var chips=rules.map(function(rule){
+    var count=rows.filter(function(r){return String(r.Error_Reason||'').toLowerCase().indexOf(rule.needle)>=0;}).length;
+    var status=rule.active?'Active repair rule':'Rule not available yet';
+    var cls=rule.active?'active':'missing';
+    return '<div class="rule-chip '+cls+'"><div class="rule-chip-name">'+rule.name+'</div><div class="rule-chip-meta">'+status+' | Detected rows: '+count+'</div></div>';
+  }).join('');
+  return '<div class="rule-coverage fade-up">'+
+    '<div class="rule-coverage-title">Repair rule coverage for this batch</div>'+
+    '<div class="rule-coverage-copy">Before approval, this shows which detected issues have automated repair logic and which ones will remain in quarantine.</div>'+
+    '<div class="rule-chip-row">'+chips+'</div>'+
+    '</div>';
+}
+
 function renderScenarioBAITab(rows){
   var t=document.getElementById('tab-ai');
   if(!rows||rows.length===0){
@@ -868,6 +902,7 @@ function renderScenarioBAITab(rows){
         '<tbody>'+body+'</tbody></table></div>'+
       '</div>'+
       '<div class="ai-side-panel">'+
+        ruleCoveragePanel(rows)+
         '<div class="ai-action-dock">'+
           '<div class="ai-action-title">Approval decision</div>'+
           '<div class="ai-action-copy">Approve starts Rep_s2 for this mixed-data batch. Reject closes this repair request without changing the quarantine table.</div>'+
@@ -876,7 +911,7 @@ function renderScenarioBAITab(rows){
           '<button class="repair-secondary" onclick="rejectScenarioB()">Reject repair</button>'+
           '</div>'+
         '</div>'+
-        '<div class="alert ab fade-up">Repair rules are maintained in the Repair Catalogue tab. Use that tab to explain active rules and capture new rule requests.</div>'+
+        '<div class="alert ab fade-up">Open the Repair Catalogue tab to view the full rule library or request new repair logic.</div>'+
       '</div>'+
     '</div>';
 }
