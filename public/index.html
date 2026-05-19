@@ -606,18 +606,10 @@ function fmtRepairAfter(row){
   '</div>';
 }
 
-function newestGoldBatch(rows){
-  rows=rows||[];
-  if(!rows.length)return [];
-  var newest=rows[0].Ingestion_Timestamp||'';
-  return rows.filter(function(r){return String(r.Ingestion_Timestamp||'')===String(newest);});
-}
-
 function renderGoldEcommOrders(batchId,rows,repairCount){
   var t=document.getElementById('tab-pipeline');
   var repairIds=(S.scenarioBRepairedRows&&S.scenarioBRepairedRows.length?S.scenarioBRepairedRows:S.scenarioBRepairInput||[]).map(rowId).filter(Boolean);
   var shownRows=repairIds.length?rows.filter(function(r){return repairIds.indexOf(String(r.Order_ID||''))>=0;}):(repairCount?rows.slice(0,repairCount):rows);
-  if(repairIds.length&&shownRows.length===0&&rows.length)shownRows=rows.slice(0,repairCount||rows.length);
   if(repairCount&&shownRows.length>repairCount)shownRows=shownRows.slice(0,repairCount);
   var repairedBody=shownRows.map(function(r){
     return '<tr class="rg">'+
@@ -644,9 +636,9 @@ function renderGoldEcommOrders(batchId,rows,repairCount){
   var goldById={};
   shownRows.forEach(function(r){goldById[String(r.Order_ID||'')]=r;});
   var repairedSourceRows=(S.scenarioBRepairedRows||[]).filter(function(r){return repairIds.indexOf(rowId(r))>=0;});
-  var compareBody=repairedSourceRows.map(function(r,idx){
+  var compareBody=repairedSourceRows.map(function(r){
     var id=rowId(r);
-    var matchedGold=goldById[id]||shownRows[idx];
+    var matchedGold=goldById[id];
     return '<tr class="rg">'+
       '<td>'+fmtValue(id)+'</td>'+
       '<td>'+fmtValue(r.Error_Reason)+'</td>'+
@@ -727,8 +719,15 @@ function renderRepairCatalogue(){
 async function loadGoldEcommOrders(batchId,repairCount,since){
   dataLog('Requesting latest ecomm Gold records');
   log('Gold: Fetching latest rows from dbo.gold_ecomm_orders...','l-info');
+  var params=new URLSearchParams();
+  if(since)params.set('since',since);
   var repairIds=(S.scenarioBRepairedRows&&S.scenarioBRepairedRows.length?S.scenarioBRepairedRows:S.scenarioBRepairInput||[]).map(rowId).filter(Boolean);
-  var rows=await fetchGoldEcommRows({since:since,orderIds:repairIds,limit:repairCount?Math.max(100,repairCount*20):undefined});
+  if(repairIds.length)params.set('orderIds',repairIds.join(','));
+  if(repairCount)params.set('limit',String(Math.max(100,repairCount*20)));
+  var response=await fetch('/api/gold-ecomm-orders'+(params.toString()?'?'+params.toString():''));
+  var data=await response.json();
+  if(!response.ok||!data.ok)throw new Error(data.error||'Unable to fetch ecomm Gold records');
+  var rows=data.rows||[];
   var matchedRows=repairIds.length?rows.filter(function(r){return repairIds.indexOf(String(r.Order_ID||''))>=0;}):(repairCount?rows.slice(0,repairCount):rows);
   if(repairCount&&matchedRows.length>repairCount)matchedRows=matchedRows.slice(0,repairCount);
   S.goldRecs=matchedRows;
@@ -737,19 +736,6 @@ async function loadGoldEcommOrders(batchId,repairCount,since){
   uiLog('Rendered repaired ecomm Gold table');
   log('Gold: Loaded '+rows.length+' actual repaired record match(es) from dbo.gold_ecomm_orders','l-ok');
   return rows;
-}
-
-async function fetchGoldEcommRows(options){
-  options=options||{};
-  var params=new URLSearchParams();
-  if(options.since)params.set('since',options.since);
-  var ids=(options.orderIds||[]).filter(Boolean);
-  if(ids.length)params.set('orderIds',ids.join(','));
-  if(options.limit)params.set('limit',String(options.limit));
-  var response=await fetch('/api/gold-ecomm-orders'+(params.toString()?'?'+params.toString():''));
-  var data=await response.json();
-  if(!response.ok||!data.ok)throw new Error(data.error||'Unable to fetch ecomm Gold records');
-  return data.rows||[];
 }
 
 async function loadQuarantineOrders(options){
@@ -954,46 +940,21 @@ async function finalizeRepairDisplay(reason){
   sn('ai','ok');sn('gold','ok');sn('pbi','ok');setProgress(100);
   setSysDot('ok');setSysStatus('Repair pipeline completed');
   log('Repair pipeline completed. Refreshing quarantine rows for Scenario B Run ID '+fmtValue(S.scenarioBRunId||'latest')+'...','l-ok');
-  var attemptedRows=(S.scenarioBRepairInput&&S.scenarioBRepairInput.length?S.scenarioBRepairInput:S.scenarioBUnrepairedRows||[]).slice();
-  var attemptedIds=attemptedRows.map(rowId).filter(Boolean);
   var postRows=await loadQuarantineOrders({since:S.scenarioBStartedAt,limit:Math.max(S.scenarioBBadRows||10,50),activeOnly:false,runId:S.scenarioBRunId||'latest'});
   if(postRows.length&&postRows[0].Run_ID)S.scenarioBRunId=postRows[0].Run_ID;
   var split=splitRepairRows(postRows);
+  var repairedCount=split.repaired.length;
+  S.goldBadgeOverride=(S.scenarioBCleanRows||0)+repairedCount;
+  updateBadges();
+  log('Repair result: '+repairedCount+' repaired, '+split.unrepaired.length+' still unrepaired for this run.','l-ai');
   uiLog((reason==='timeout'?'Manual timeout recovery':'Repair completed')+'; switching to repaired data refresh');
   setRepairStatus('<div class="alert ak fade-up">Rep_s2 completed. Loading repaired records from Gold...</div>');
   var batchId='REPAIR-'+new Date().getTime();
-  var goldRows=await fetchGoldEcommRows({orderIds:attemptedIds,limit:Math.max(500,attemptedIds.length||100)});
-  var goldIds=goldRows.map(function(r){return String(r.Order_ID||'');});
-  if(!goldRows.length){
-    goldRows=await fetchGoldEcommRows({since:S.repairStartedAt||S.scenarioBStartedAt,limit:Math.max(500,(S.scenarioBBadRows||100)*2)});
-    goldIds=goldRows.map(function(r){return String(r.Order_ID||'');});
-  }
-  if(!goldRows.length){
-    var latestGoldRows=await fetchGoldEcommRows({limit:Math.max(500,(S.scenarioBBadRows||100)*2)});
-    goldRows=newestGoldBatch(latestGoldRows);
-    goldIds=goldRows.map(function(r){return String(r.Order_ID||'');});
-    log('Gold fallback: Using newest Gold ingestion batch with '+goldRows.length+' row(s) because exact repair-id matching returned no rows.','l-warn');
-  }
-  var matchedSourceRows=attemptedRows.filter(function(r){return goldIds.indexOf(rowId(r))>=0;});
-  if(matchedSourceRows.length){
-    S.scenarioBRepairedRows=matchedSourceRows;
-    S.scenarioBUnrepairedRows=attemptedRows.filter(function(r){return goldIds.indexOf(rowId(r))<0;});
-  }else if(goldRows.length){
-    S.scenarioBRepairedRows=attemptedRows.slice(0,goldRows.length);
-    S.scenarioBUnrepairedRows=attemptedRows.slice(goldRows.length);
-  }else{
-    S.scenarioBRepairedRows=split.repaired.slice();
-    S.scenarioBUnrepairedRows=split.unrepaired.slice();
-    S.scenarioBRepairInput=[];
-  }
-  var repairedCount=goldRows.length||S.scenarioBRepairedRows.length;
-  S.goldRecs=goldRows.slice(0,repairedCount);
+  await loadGoldEcommOrders(batchId,repairedCount);
   S.aiRecs=S.goldRecs.slice();
-  S.scenarioBRepairedCount=repairedCount;
+  S.scenarioBRepairedCount=S.goldRecs.length;
   S.goldBadgeOverride=(S.scenarioBCleanRows||0)+S.scenarioBRepairedCount;
   updateBadges();
-  log('Repair result: '+S.scenarioBRepairedCount+' Gold row(s) detected after repair, '+S.scenarioBUnrepairedRows.length+' still unrepaired for this run.','l-ai');
-  renderGoldEcommOrders(batchId,S.goldRecs,S.scenarioBRepairedCount);
   uiLog('Kept Quality Gate as pre-repair Scenario B detection result');
   var badCount=Number(S.scenarioBBadRows||0)||((S.scenarioBAllRows&&S.scenarioBAllRows.length)||(S.scenarioBRepairedCount+S.scenarioBUnrepairedRows.length));
   var notRepaired=Math.max(0,badCount-S.scenarioBRepairedCount);
