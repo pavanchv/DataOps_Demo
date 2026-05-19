@@ -697,11 +697,12 @@ function goldRowFromRepairSummary(r){
   };
 }
 
-async function loadRepairSummaryEcommOrders(batchId){
-  dataLog('Requesting latest repaired ecomm run summary');
-  log('Repair summary: Fetching latest repaired Run ID from quarantine and matching Gold by Order_ID...','l-info');
+async function loadRepairSummaryEcommOrders(batchId,runId){
+  runId=runId||S.scenarioBRunId||'latestRepaired';
+  dataLog('Requesting repaired ecomm run summary for '+runId);
+  log('Repair summary: Fetching quarantine rows for Run ID '+fmtValue(runId)+' and matching Gold by Order_ID...','l-info');
   var params=new URLSearchParams();
-  params.set('runId','latestRepaired');
+  params.set('runId',runId);
   params.set('limit','2000');
   var response=await fetch('/api/repair-summary-ecomm-orders?'+params.toString());
   var data=await response.json();
@@ -710,8 +711,8 @@ async function loadRepairSummaryEcommOrders(batchId){
   if(rows.length&&rows[0].Run_ID)S.scenarioBRunId=rows[0].Run_ID;
   S.scenarioBAllRows=rows.slice();
   S.scenarioBBadRows=rows.length;
-  S.scenarioBRepairedRows=rows.filter(function(r){return isRepairedRow(r)&&r.Gold_Order_ID;});
-  S.scenarioBUnrepairedRows=rows.filter(function(r){return !isRepairedRow(r)||!r.Gold_Order_ID;});
+  S.scenarioBRepairedRows=rows.filter(function(r){return isRepairedRow(r);});
+  S.scenarioBUnrepairedRows=rows.filter(function(r){return !isRepairedRow(r);});
   S.scenarioBRepairInput=S.scenarioBUnrepairedRows.slice();
   S.scenarioBRepairedCount=S.scenarioBRepairedRows.length;
   S.quarRecs=S.scenarioBUnrepairedRows.slice();
@@ -719,7 +720,7 @@ async function loadRepairSummaryEcommOrders(batchId){
   S.goldBadgeOverride=(S.scenarioBCleanRows||0)+S.goldRecs.length;
   updateBadges();
   renderGoldEcommOrders(batchId,S.goldRecs,S.goldRecs.length);
-  log('Repair summary: Run ID '+fmtValue(S.scenarioBRunId)+' has '+S.goldRecs.length+' repaired Gold match(es) and '+S.scenarioBUnrepairedRows.length+' unrepaired row(s).','l-ok');
+  log('Repair summary: Run ID '+fmtValue(S.scenarioBRunId)+' has '+S.scenarioBRepairedRows.length+' repaired quarantine row(s), '+S.goldRecs.length+' Gold match(es), and '+S.scenarioBUnrepairedRows.length+' unrepaired row(s).','l-ok');
   return rows;
 }
 
@@ -918,11 +919,11 @@ function rejectScenarioB(){
 async function finalizeRepairDisplay(reason){
   sn('ai','ok');sn('gold','ok');sn('pbi','ok');setProgress(100);
   setSysDot('ok');setSysStatus('Repair pipeline completed');
-  log('Repair pipeline completed. Refreshing latest repaired quarantine run by repaired timestamp...','l-ok');
+  log('Repair pipeline completed. Refreshing quarantine rows for Scenario B Run ID '+fmtValue(S.scenarioBRunId||'latest repaired run')+'...','l-ok');
   uiLog((reason==='timeout'?'Manual timeout recovery':'Repair completed')+'; switching to repaired data refresh');
-  setRepairStatus('<div class="alert ak fade-up">Rep_s2 completed. Loading repaired Run ID from quarantine and matching Gold records...</div>');
+  setRepairStatus('<div class="alert ak fade-up">Rep_s2 completed. Loading repaired records for this Scenario B Run ID...</div>');
   var batchId='REPAIR-'+new Date().getTime();
-  await loadRepairSummaryEcommOrders(batchId);
+  await loadRepairSummaryEcommOrders(batchId,S.scenarioBRunId);
   S.aiRecs=S.goldRecs.slice();
   S.scenarioBRepairedCount=S.goldRecs.length;
   S.goldBadgeOverride=(S.scenarioBCleanRows||0)+S.scenarioBRepairedCount;
