@@ -60,9 +60,9 @@ html,body{min-height:100%;background:var(--color-page-bg)}
 .snode-progress{position:absolute;bottom:0;left:12px;height:3px;background:var(--color-primary);width:0;transition:width .1s linear;border-radius:3px}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 
-.main{display:grid;grid-template-columns:340px minmax(0,1fr);gap:16px;padding:16px;height:calc(100vh - 154px);min-height:0}
+.main{display:grid;grid-template-columns:340px minmax(0,1fr);gap:16px;padding:16px;min-height:calc(100vh - 154px)}
 .left-panel{min-width:0;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);box-shadow:var(--shadow-sm);display:flex;flex-direction:column;overflow:hidden;max-height:calc(100vh - 190px)}
-.right-panel{min-width:0;min-height:0;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);box-shadow:var(--shadow-sm);display:flex;flex-direction:column;overflow:hidden}
+.right-panel{min-width:0;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);box-shadow:var(--shadow-sm);display:flex;flex-direction:column;overflow:hidden}
 
 .panel-hdr{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--color-text-secondary);padding:12px 16px;border-bottom:1px solid var(--color-border);background:var(--color-surface-alt)}
 
@@ -100,7 +100,7 @@ html,body{min-height:100%;background:var(--color-page-bg)}
 @keyframes btnPulseMixed{0%,100%{box-shadow:0 0 0 0 rgba(217,119,6,.42)}50%{box-shadow:0 0 0 7px rgba(217,119,6,0)}}
 @keyframes dotPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.55);opacity:.55}}
 
-.content-area{flex:1;min-height:0;overflow-y:auto;padding:18px;max-height:none;background:var(--color-surface)}
+.content-area{flex:1;overflow-y:auto;padding:18px;max-height:none;background:var(--color-surface)}
 
 .section{margin-bottom:14px}
 .sec-hdr{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-secondary);margin-bottom:10px}
@@ -193,13 +193,12 @@ html,body{min-height:100%;background:var(--color-page-bg)}
 .rule-msg{font-size:11px;color:var(--color-text-secondary);margin-top:8px}
 .compare-cell{font-size:12px;line-height:1.45;color:var(--color-text)}
 .compare-cell .muted{display:block;color:var(--color-text-muted);font-size:11px;margin-top:2px}
-#tab-ai{height:100%;overflow:hidden}
-.ai-review-layout{height:calc(100% - 70px);min-height:0;display:grid;grid-template-columns:minmax(420px,1.15fr) minmax(420px,.85fr);gap:14px;align-items:stretch;margin-top:12px}
+.ai-review-layout{display:grid;grid-template-columns:minmax(420px,1.15fr) minmax(420px,.85fr);gap:14px;align-items:stretch;margin-top:12px}
 .ai-record-panel{border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-surface);overflow:hidden;display:flex;flex-direction:column;min-height:0}
 .ai-record-head{padding:10px 12px;border-bottom:1px solid var(--color-border);background:var(--color-surface-alt);font-size:12px;font-weight:800;color:var(--color-text)}
-.ai-record-scroll{overflow:auto;flex:1;min-height:0}
+.ai-record-scroll{height:clamp(420px,calc(100vh - 360px),620px);overflow:auto;flex:1}
 .ai-record-scroll .tbl th{position:sticky;top:0;z-index:1}
-.ai-side-panel{display:flex;flex-direction:column;gap:12px;min-height:0;overflow:auto}
+.ai-side-panel{display:flex;flex-direction:column;gap:12px}
 .ai-live-status{margin-bottom:12px}
 .ai-side-panel .rules-panel{margin:0}
 .ai-side-panel .rule-grid{grid-template-columns:repeat(2,1fr)}
@@ -208,15 +207,6 @@ html,body{min-height:100%;background:var(--color-page-bg)}
 .ai-action-dock{border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-surface-alt);padding:12px}
 .ai-action-title{font-size:13px;font-weight:800;color:var(--color-text);margin-bottom:4px}
 .ai-action-copy{font-size:11px;color:var(--color-text-secondary);line-height:1.45;margin-bottom:10px}
-.rule-coverage{border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-surface);padding:12px}
-.rule-coverage-title{font-size:13px;font-weight:800;color:var(--color-text);margin-bottom:4px}
-.rule-coverage-copy{font-size:11px;color:var(--color-text-secondary);line-height:1.45;margin-bottom:10px}
-.rule-chip-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-.rule-chip{border:1px solid var(--color-border);border-radius:8px;padding:9px 10px;background:var(--color-surface-alt)}
-.rule-chip.active{border-color:#A7E2B7;background:#F2FBF5}
-.rule-chip.missing{border-color:#F6D88A;background:#FFFBEB}
-.rule-chip-name{font-size:11px;font-weight:800;color:var(--color-text);margin-bottom:3px}
-.rule-chip-meta{font-size:10px;color:var(--color-text-secondary)}
 
 .bar-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
 .bar-lbl{font-size:10px;color:var(--color-text-secondary);min-width:70px}
@@ -273,10 +263,7 @@ html,body{min-height:100%;background:var(--color-page-bg)}
   .meta-strip{grid-template-columns:1fr}
   .rule-grid{grid-template-columns:1fr}
   .ai-review-layout{grid-template-columns:1fr}
-  #tab-ai{height:auto;overflow:visible}
-  .ai-review-layout{height:auto}
-  .ai-record-scroll{max-height:360px}
-  .rule-chip-row{grid-template-columns:1fr}
+  .ai-record-scroll{height:360px}
   .ai-side-panel .rule-grid{grid-template-columns:1fr}
 }
 </style>
@@ -331,14 +318,12 @@ html,body{min-height:100%;background:var(--color-page-bg)}
       <div class="rtab active" onclick="switchTab('pipeline')">Pipeline</div>
       <div class="rtab" onclick="switchTab('quality')">Quality gate</div>
       <div class="rtab" onclick="switchTab('ai')">AI engine</div>
-      <div class="rtab" onclick="switchTab('catalogue')">Repair Catalogue</div>
       <div class="rtab" onclick="switchTab('pbi')">Power BI</div>
     </div>
     <div class="content-area" id="content-area">
       <div id="tab-pipeline"><div style="font-size:12px;color:var(--color-text-muted);padding:20px 0">Select a scenario on the left to start the automated demo. Watch each stage activate in real time across all four tabs.</div></div>
       <div id="tab-quality" style="display:none"></div>
       <div id="tab-ai" style="display:none"></div>
-      <div id="tab-catalogue" style="display:none"></div>
       <div id="tab-pbi" style="display:none"></div>
     </div>
   </div>
@@ -346,7 +331,7 @@ html,body{min-height:100%;background:var(--color-page-bg)}
 </div>
 
 <script>
-var S={goldRecs:[],quarRecs:[],aiRecs:[],batches:0,running:false,decisions:{},speedMult:1,scenarioBStartedAt:null,scenarioBRunId:null,scenarioBBadRows:0,scenarioBCleanRows:0,scenarioBAllRows:[],scenarioBRepairInput:[],scenarioBRepairedRows:[],scenarioBUnrepairedRows:[],scenarioBRepairedCount:0,repairStartedAt:null,goldBadgeOverride:null};
+var S={goldRecs:[],quarRecs:[],aiRecs:[],batches:0,running:false,decisions:{},speedMult:1,scenarioBStartedAt:null,scenarioBRunId:null,scenarioBBadRows:0,scenarioBCleanRows:0,scenarioBAllRows:[],scenarioBRepairInput:[],scenarioBRepairedRows:[],scenarioBUnrepairedRows:[],scenarioBRepairedCount:0,goldBadgeOverride:null};
 var PIPELINES={scenarioB:'8063e804-d6de-4b8a-a750-e9357fc5dd18',repair:'971b2c65-c4d8-4044-90ad-a0daecc48836'};
 var POWERBI_REPORT_URL='https://app.powerbi.com/reportEmbed?reportId=0e376b19-db43-4f50-b715-6bc8f1e56565&autoAuth=true&ctid=2808f13e-3eee-4625-a70c-f4c8dab8aa28';
 var logLines=[];
@@ -416,7 +401,7 @@ function splitRepairRows(rows){
 function switchTab(t){
   activeTab=t;
   document.querySelectorAll('.rtab').forEach(function(el,i){el.classList.remove('active');});
-  var tabs=['pipeline','quality','ai','catalogue','pbi'];
+  var tabs=['pipeline','quality','ai','pbi'];
   tabs.forEach(function(id,i){
     if(id===t)document.querySelectorAll('.rtab')[i].classList.add('active');
     document.getElementById('tab-'+id).style.display=id===t?'block':'none';
@@ -583,12 +568,6 @@ function repairRuleFor(reason){
   return 'Rep_s2 evaluates the configured repair rules.';
 }
 
-function repairConfidenceFor(reason,matchedGold){
-  var rule=repairRuleFor(reason);
-  if(rule.indexOf('No automated repair rule')>=0)return 'Pending rule';
-  return matchedGold?'100%':'Needs review';
-}
-
 function fmtRepairBefore(row){
   return '<div class="compare-cell">'+
     '<strong>Quarantine:</strong> '+fmtValue(row.Order_ID)+
@@ -638,14 +617,12 @@ function renderGoldEcommOrders(batchId,rows,repairCount){
   var repairedSourceRows=(S.scenarioBRepairedRows||[]).filter(function(r){return repairIds.indexOf(rowId(r))>=0;});
   var compareBody=repairedSourceRows.map(function(r){
     var id=rowId(r);
-    var matchedGold=goldById[id];
     return '<tr class="rg">'+
       '<td>'+fmtValue(id)+'</td>'+
       '<td>'+fmtValue(r.Error_Reason)+'</td>'+
       '<td>'+fmtRepairBefore(r)+'</td>'+
-      '<td>'+fmtRepairAfter(matchedGold)+'</td>'+
+      '<td>'+fmtRepairAfter(goldById[id])+'</td>'+
       '<td>'+repairRuleFor(r.Error_Reason)+'</td>'+
-      '<td><span class="badge bk">'+repairConfidenceFor(r.Error_Reason,matchedGold)+'</span></td>'+
     '</tr>';
   }).join('');
 
@@ -664,8 +641,8 @@ function renderGoldEcommOrders(batchId,rows,repairCount){
     '<details class="repair-fold" open><summary>Before and after repair ('+repairedShown+')</summary>'+
     '<div class="repair-note">Before values come from the current-run quarantine records that Rep_s2 marked as repaired. After values come from the matching records in dbo.gold_ecomm_orders.</div>'+
     '<div style="padding:0;overflow:auto"><table class="tbl" style="min-width:1100px">'+
-    '<thead><tr><th>Order ID</th><th>Issue found</th><th>Before repair</th><th>After repair</th><th>Rule applied</th><th>Confidence</th></tr></thead>'+
-    '<tbody>'+(compareBody||'<tr><td colspan="6" style="text-align:center;color:var(--color-text-muted);padding:14px">No repaired quarantine records matched to Gold for this run.</td></tr>')+'</tbody>'+
+    '<thead><tr><th>Order ID</th><th>Issue found</th><th>Before repair</th><th>After repair</th><th>Rule applied</th></tr></thead>'+
+    '<tbody>'+(compareBody||'<tr><td colspan="5" style="text-align:center;color:var(--color-text-muted);padding:14px">No repaired quarantine records matched to Gold for this run.</td></tr>')+'</tbody>'+
     '</table></div></details>'+
     '<details class="repair-fold" open><summary>Repaired records from Gold ('+repairedShown+')</summary>'+
     '<div class="repair-note">These records were repaired by Rep_s2 and retrieved from dbo.gold_ecomm_orders.</div>'+
@@ -683,37 +660,6 @@ function renderGoldEcommOrders(batchId,rows,repairCount){
 
 function renderScenarioACompleteAI(){
   document.getElementById('tab-ai').innerHTML='<div class="center-state"><div class="center-state-icon">&#10003;</div><div class="center-state-title">No AI repair action needed</div><div class="center-state-text">Scenario A completed as a clean-data flow. No quarantined records require AI repair.</div></div>';
-}
-
-function renderRepairCatalogue(){
-  var rules=[
-    ['Invalid Total_Amount','Active','Recalculate total amount using Quantity x Price after standardization.','100%'],
-    ['Invalid Price','Active','Use product reference pricing when the source price is invalid or missing.','100%'],
-    ['Invalid Quantity','Active','Apply approved quantity correction logic for recoverable order rows.','100%'],
-    ['Missing Product','Needs engineering','Add lookup logic from SKU, catalogue, or product master data.','Pending'],
-    ['Missing Transaction_Date','Needs engineering','Add recovery logic from source file date, ingestion date, or order metadata.','Pending'],
-    ['New exception type','Draft','Capture new repair ideas during demo and send them to Data Engineering.','Pending']
-  ];
-  var rows=rules.map(function(r){
-    var cls=r[1]==='Active'?'bk':r[1]==='Needs engineering'?'bg':'bai';
-    return '<tr><td><strong>'+r[0]+'</strong></td><td><span class="badge '+cls+'">'+r[1]+'</span></td><td>'+r[2]+'</td><td>'+r[3]+'</td></tr>';
-  }).join('');
-  document.getElementById('tab-catalogue').innerHTML=
-    '<div class="section">'+
-      '<div class="sec-hdr">Repair rule catalogue</div>'+
-      '<div class="alert ab fade-up">This catalogue shows the governed repair logic available to Rep_s2. Active rules are deterministic business rules, so the confidence is normally 100% and fully auditable.</div>'+
-      '<div class="card" style="padding:0;overflow:auto"><table class="tbl" style="min-width:900px">'+
-      '<thead><tr><th>Rule</th><th>Status</th><th>Repair logic</th><th>Confidence</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
-    '</div>'+
-    '<div class="rules-panel fade-up">'+
-      '<div class="rules-title">Request a new repair rule</div>'+
-      '<div class="rules-copy">Use this during the demo when a business team wants a new exception to be handled automatically in future pipeline runs.</div>'+
-      '<div class="rule-request" style="border-top:none;padding-top:0">'+
-        '<textarea class="rule-input" id="rule-request-text" placeholder="Example rule: If Product is missing but SKU is available, derive Product from the SKU master table."></textarea>'+
-        '<button class="rule-submit" type="button" onclick="captureRuleRequest()">Add rule request</button>'+
-        '<div class="rule-msg" id="rule-request-msg">This request will be sent to the Data Engineering team to work on the repair logic.</div>'+
-      '</div>'+
-    '</div>';
 }
 
 async function loadGoldEcommOrders(batchId,repairCount,since){
@@ -854,27 +800,6 @@ function renderAITab(quarRecs,phase){
     (allDone?'<div class="alert ak fade-up" id="ai-ready-msg">'+apCount+' record(s) approved. <strong>'+quarRecs.filter(function(r){return S.decisions[r.id]==='rj';}).length+'</strong> rejected (remain quarantined).</div><button class="btn b-purple fade-up" style="width:auto" onclick="sendToGold()">Send approved records to Gold -></button>':'');
 }
 
-function ruleCoveragePanel(rows){
-  var rules=[
-    {name:'Invalid Total_Amount',needle:'total',active:true},
-    {name:'Invalid Price',needle:'price',active:true},
-    {name:'Invalid Quantity',needle:'quantity',active:true},
-    {name:'Missing Product',needle:'product',active:false},
-    {name:'Missing Transaction_Date',needle:'transaction',active:false}
-  ];
-  var chips=rules.map(function(rule){
-    var count=rows.filter(function(r){return String(r.Error_Reason||'').toLowerCase().indexOf(rule.needle)>=0;}).length;
-    var status=rule.active?'Active repair rule':'Rule not available yet';
-    var cls=rule.active?'active':'missing';
-    return '<div class="rule-chip '+cls+'"><div class="rule-chip-name">'+rule.name+'</div><div class="rule-chip-meta">'+status+' | Detected rows: '+count+'</div></div>';
-  }).join('');
-  return '<div class="rule-coverage fade-up">'+
-    '<div class="rule-coverage-title">Repair rule coverage for this batch</div>'+
-    '<div class="rule-coverage-copy">Before approval, this shows which detected issues have automated repair logic and which ones will remain in quarantine.</div>'+
-    '<div class="rule-chip-row">'+chips+'</div>'+
-    '</div>';
-}
-
 function renderScenarioBAITab(rows){
   var t=document.getElementById('tab-ai');
   if(!rows||rows.length===0){
@@ -902,7 +827,23 @@ function renderScenarioBAITab(rows){
         '<tbody>'+body+'</tbody></table></div>'+
       '</div>'+
       '<div class="ai-side-panel">'+
-        ruleCoveragePanel(rows)+
+        '<div class="rules-panel">'+
+        '<div class="rules-title">Repair rules used by Rep_s2</div>'+
+        '<div class="rules-copy">Configured rules repair recoverable records. Records without a matching rule stay in quarantine for engineering follow-up.</div>'+
+        '<div class="rule-grid">'+
+          '<div class="rule-card ready"><div class="rule-name">Invalid Total_Amount</div><div class="rule-desc">Recalculate from quantity and price.</div></div>'+
+          '<div class="rule-card ready"><div class="rule-name">Invalid Price</div><div class="rule-desc">Use product reference pricing when available.</div></div>'+
+          '<div class="rule-card ready"><div class="rule-name">Invalid Quantity</div><div class="rule-desc">Apply approved quantity correction.</div></div>'+
+          '<div class="rule-card needed"><div class="rule-name">Missing Product</div><div class="rule-desc">Needs product lookup logic.</div></div>'+
+          '<div class="rule-card needed"><div class="rule-name">Missing Transaction_Date</div><div class="rule-desc">Needs date recovery logic.</div></div>'+
+          '<div class="rule-card needed"><div class="rule-name">New rule request</div><div class="rule-desc">Capture extra repair ideas.</div></div>'+
+        '</div>'+
+        '<div class="rule-request">'+
+          '<textarea class="rule-input" id="rule-request-text" placeholder="Example rule: If Product is missing but SKU is available, derive Product from the SKU master table."></textarea>'+
+          '<button class="rule-submit" type="button" onclick="captureRuleRequest()">Add rule request</button>'+
+          '<div class="rule-msg" id="rule-request-msg">This request will be sent to the Data Engineering team to work on the repair logic.</div>'+
+        '</div>'+
+        '</div>'+
         '<div class="ai-action-dock">'+
           '<div class="ai-action-title">Approval decision</div>'+
           '<div class="ai-action-copy">Approve starts Rep_s2 for this mixed-data batch. Reject closes this repair request without changing the quarantine table.</div>'+
@@ -911,7 +852,6 @@ function renderScenarioBAITab(rows){
           '<button class="repair-secondary" onclick="rejectScenarioB()">Reject repair</button>'+
           '</div>'+
         '</div>'+
-        '<div class="alert ab fade-up">Open the Repair Catalogue tab to view the full rule library or request new repair logic.</div>'+
       '</div>'+
     '</div>';
 }
@@ -980,7 +920,6 @@ async function refreshRepairAfterTimeout(){
 async function approveScenarioB(){
   uiLog('Approve repair button clicked');
   log('AI engine: Approve repair clicked. Starting Rep_s2 repair pipeline...','l-ai');
-  S.repairStartedAt=new Date(Date.now()-30000).toISOString();
   setSysDot('run');setSysStatus('Starting repair pipeline Rep_s2');
   sn('ai','run');setProgress(88);
   disableBtns(true);
@@ -1274,14 +1213,13 @@ function setScenarioButtonState(activeType){
 }
 
 function hardReset(){
-  S={goldRecs:[],quarRecs:[],aiRecs:[],batches:0,running:false,decisions:{},speedMult:S.speedMult,scenarioBStartedAt:null,scenarioBRunId:null,scenarioBBadRows:0,scenarioBCleanRows:0,scenarioBAllRows:[],scenarioBRepairInput:[],scenarioBRepairedRows:[],scenarioBUnrepairedRows:[],scenarioBRepairedCount:0,repairStartedAt:null,goldBadgeOverride:null};
+  S={goldRecs:[],quarRecs:[],aiRecs:[],batches:0,running:false,decisions:{},speedMult:S.speedMult,scenarioBStartedAt:null,scenarioBRunId:null,scenarioBBadRows:0,scenarioBCleanRows:0,scenarioBAllRows:[],scenarioBRepairInput:[],scenarioBRepairedRows:[],scenarioBUnrepairedRows:[],scenarioBRepairedCount:0,goldBadgeOverride:null};
   logLines=[];document.getElementById('log-area').innerHTML='';
   ['src','adf','bronze','silver','dq','gate','ai','gold','pbi'].forEach(function(id){sn(id,'idle');prog(id,0);});
   setProgress(0);setSysDot('ok');setSysStatus('Ready');updateBadges();
   document.getElementById('tab-pipeline').innerHTML='<div style="font-size:12px;color:var(--color-text-muted);padding:20px 0">Select a scenario on the left to start the automated demo.</div>';
   document.getElementById('tab-quality').innerHTML='';
   document.getElementById('tab-ai').innerHTML='';
-  renderRepairCatalogue();
   document.getElementById('tab-pbi').innerHTML='';
   switchTab('pipeline');
   log('System reset. Ready to run.','l-dim');
@@ -1291,14 +1229,13 @@ updateBadges();log('System initialised. Azure DataOps pipeline ready.','l-ok');
 log('Select Scenario A or Scenario B to start a live Fabric pipeline.','l-dim');
 switchTab('pipeline');
 document.querySelectorAll('.rtab').forEach(function(el,i){el.style.display='flex';});
-['tab-pipeline','tab-quality','tab-ai','tab-catalogue','tab-pbi'].forEach(function(id){document.getElementById(id).style.display='none';});
+['tab-pipeline','tab-quality','tab-ai','tab-pbi'].forEach(function(id){document.getElementById(id).style.display='none';});
 document.getElementById('tab-pipeline').style.display='block';
-renderRepairCatalogue();
 renderPowerBIReport();
 async function liveScenarioA(){
   var records=CLEAN;S.batches++;var batchId='LIVE-'+(4820+S.batches);
   uiLog('Scenario A button clicked');
-  S.goldRecs=[];S.quarRecs=[];S.aiRecs=[];S.decisions={};S.scenarioBStartedAt=null;S.scenarioBRunId=null;S.scenarioBBadRows=0;S.scenarioBCleanRows=0;S.scenarioBAllRows=[];S.scenarioBRepairInput=[];S.scenarioBRepairedRows=[];S.scenarioBUnrepairedRows=[];S.scenarioBRepairedCount=0;S.repairStartedAt=null;S.goldBadgeOverride=null;updateBadges();
+  S.goldRecs=[];S.quarRecs=[];S.aiRecs=[];S.decisions={};S.scenarioBStartedAt=null;S.scenarioBRunId=null;S.scenarioBBadRows=0;S.scenarioBCleanRows=0;S.scenarioBAllRows=[];S.scenarioBRepairInput=[];S.scenarioBRepairedRows=[];S.scenarioBUnrepairedRows=[];S.scenarioBRepairedCount=0;S.goldBadgeOverride=null;updateBadges();
   uiLog('Cleared previous scenario state');
   document.getElementById('tab-quality').innerHTML='<div class="alert ab fade-up">Scenario A is running. Latest website quality gate result will load after completion.</div>';
   document.getElementById('tab-ai').innerHTML='<div class="alert ab fade-up">Scenario A is running. AI repair check will appear after the pipeline completes.</div>';
@@ -1401,7 +1338,7 @@ async function liveScenarioB(){
   var batchId='LIVE-B-'+(4820+(++S.batches));
   var runStartedAt=new Date(Date.now()-120000).toISOString();
   uiLog('Scenario B button clicked');
-  S.goldRecs=[];S.quarRecs=[];S.aiRecs=[];S.decisions={};S.scenarioBStartedAt=runStartedAt;S.scenarioBRunId=null;S.scenarioBBadRows=0;S.scenarioBCleanRows=0;S.scenarioBAllRows=[];S.scenarioBRepairInput=[];S.scenarioBRepairedRows=[];S.scenarioBUnrepairedRows=[];S.scenarioBRepairedCount=0;S.repairStartedAt=null;S.goldBadgeOverride=null;updateBadges();
+  S.goldRecs=[];S.quarRecs=[];S.aiRecs=[];S.decisions={};S.scenarioBStartedAt=runStartedAt;S.scenarioBRunId=null;S.scenarioBBadRows=0;S.scenarioBCleanRows=0;S.scenarioBAllRows=[];S.scenarioBRepairInput=[];S.scenarioBRepairedRows=[];S.scenarioBUnrepairedRows=[];S.scenarioBRepairedCount=0;S.goldBadgeOverride=null;updateBadges();
   uiLog('Cleared previous Scenario A data from UI state');
   log('--- Scenario B: Starting real Fabric mixed-data pipeline '+batchId+' ---','l-warn');
   setSysDot('run');setSysStatus('Starting Scenario B Fabric pipeline...');
