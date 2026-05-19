@@ -277,15 +277,22 @@ def get_gold_website_orders():
     return run_sql_query(GOLD_SQL_DATABASE, GOLD_SQL_ENDPOINT_ID, SQL_QUERIES["gold_website_orders"])
 
 
-def get_gold_ecomm_orders(since="", limit=10):
-    where_clause = ""
+def get_gold_ecomm_orders(since="", limit=10, order_ids=None):
+    order_ids = [str(item).strip() for item in (order_ids or []) if str(item).strip()]
+    where_parts = []
     params = []
+    if order_ids:
+        placeholders = ", ".join("?" for _ in order_ids)
+        where_parts.append(f"Order_ID IN ({placeholders})")
+        params.extend(order_ids)
     if since:
-        where_clause = "WHERE Ingestion_Timestamp >= ?"
+        where_parts.append("Ingestion_Timestamp >= ?")
         params.append(since)
+    where_clause = ("WHERE " + " AND ".join(where_parts)) if where_parts else ""
+    top_count = len(order_ids) if order_ids else safe_int(limit, 10)
     query = f"""
 SET NOCOUNT ON;
-SELECT TOP {safe_int(limit, 10)}
+SELECT TOP {top_count}
   Order_ID,
   Transaction_Date,
   Product,
@@ -342,21 +349,29 @@ def safe_int(value, default):
 def get_quarantine_ecomm_orders(since="", limit=10, active_only=True, run_id=""):
     where_parts = []
     params = []
-    if run_id == "latest":
+    if run_id in ("latest", "latestRepaired"):
         latest_where = []
         latest_params = []
         if since:
             latest_where.append("Quarantine_Timestamp >= ?")
             latest_params.append(since)
-        if active_only:
+        if run_id == "latestRepaired":
+            latest_where.append("(Is_Repaired = 1 OR Repaired_Timestamp IS NOT NULL)")
+        elif active_only:
             latest_where.append("(Is_Repaired IS NULL OR Is_Repaired = 0)")
         latest_clause = ("WHERE " + " AND ".join(latest_where)) if latest_where else ""
+        latest_order = (
+            "ORDER BY MAX(Repaired_Timestamp) DESC, MAX(Quarantine_Timestamp) DESC"
+            if run_id == "latestRepaired"
+            else "ORDER BY MAX(Quarantine_Timestamp) DESC"
+        )
         latest_query = f"""
 SET NOCOUNT ON;
 SELECT TOP 1 Run_ID
 FROM dbo.quarantine_ecomm_orders
 {latest_clause}
-ORDER BY Quarantine_Timestamp DESC;
+GROUP BY Run_ID
+{latest_order};
 """
         latest_rows = run_sql_query(SILVER_SQL_DATABASE, SILVER_SQL_ENDPOINT_ID, latest_query, latest_params)
         run_id = str(latest_rows[0]["Run_ID"]) if latest_rows else ""
@@ -386,6 +401,61 @@ FROM dbo.quarantine_ecomm_orders
 ORDER BY Quarantine_Timestamp DESC;
 """
     return run_sql_query(SILVER_SQL_DATABASE, SILVER_SQL_ENDPOINT_ID, query, params)
+
+
+def get_repair_summary_ecomm_orders(since="", limit=1000, run_id="latestRepaired"):
+    params = []
+    selected_run_id = str(run_id or "").strip()
+    if selected_run_id in ("", "latest", "latestRepaired"):
+        latest_where = ["(Is_Repaired = 1 OR Repaired_Timestamp IS NOT NULL)"]
+        latest_params = []
+        if since:
+            latest_where.append("Quarantine_Timestamp >= ?")
+            latest_params.append(since)
+        latest_query = f"""
+SET NOCOUNT ON;
+SELECT TOP 1 Run_ID
+FROM LK_Silver.dbo.quarantine_ecomm_orders
+WHERE {" AND ".join(latest_where)}
+GROUP BY Run_ID
+ORDER BY MAX(Repaired_Timestamp) DESC, MAX(Quarantine_Timestamp) DESC;
+"""
+        latest_rows = run_sql_query(GOLD_SQL_DATABASE, GOLD_SQL_ENDPOINT_ID, latest_query, latest_params)
+        selected_run_id = str(latest_rows[0]["Run_ID"]) if latest_rows else ""
+
+    where_parts = []
+    if selected_run_id:
+        where_parts.append("q.Run_ID = ?")
+        params.append(selected_run_id)
+    if since:
+        where_parts.append("q.Quarantine_Timestamp >= ?")
+        params.append(since)
+    where_clause = ("WHERE " + " AND ".join(where_parts)) if where_parts else ""
+    query = f"""
+SET NOCOUNT ON;
+SELECT TOP {safe_int(limit, 1000)}
+  q.Order_ID,
+  q.Price,
+  q.Error_Reason,
+  q.Quarantine_Timestamp,
+  q.Run_ID,
+  q.Is_Repaired,
+  q.Repaired_Timestamp,
+  g.Order_ID AS Gold_Order_ID,
+  g.Transaction_Date,
+  g.Product,
+  g.Quantity,
+  g.Price AS Gold_Price,
+  g.Total_Amount,
+  g.Source_File,
+  g.Ingestion_Timestamp
+FROM LK_Silver.dbo.quarantine_ecomm_orders q
+LEFT JOIN dbo.gold_ecomm_orders g
+  ON CAST(q.Order_ID AS varchar(100)) = CAST(g.Order_ID AS varchar(100))
+{where_clause}
+ORDER BY q.Quarantine_Timestamp DESC, q.Order_ID;
+"""
+    return run_sql_query(GOLD_SQL_DATABASE, GOLD_SQL_ENDPOINT_ID, query, params)
 
 
 def write_json(handler, status, body):
@@ -486,7 +556,22 @@ class DemoHandler(SimpleHTTPRequestHandler):
                 params = urllib.parse.parse_qs(parsed.query)
                 since = params.get("since", [""])[0]
                 limit = safe_int(params.get("limit", ["10"])[0], 10)
-                rows = get_gold_ecomm_orders(since=since, limit=limit)
+                order_ids = []
+                if params.get("orderIds"):
+                    order_ids = [item for value in params.get("orderIds", []) for item in value.split(",")]
+                rows = get_gold_ecomm_orders(since=since, limit=limit, order_ids=order_ids)
+                write_json(self, 200, {"ok": True, "rows": rows})
+            except Exception as error:
+                write_json(self, 500, {"ok": False, "error": str(error)})
+            return
+
+        if parsed.path == "/api/repair-summary-ecomm-orders":
+            try:
+                params = urllib.parse.parse_qs(parsed.query)
+                since = params.get("since", [""])[0]
+                limit = safe_int(params.get("limit", ["1000"])[0], 1000)
+                run_id = params.get("runId", ["latestRepaired"])[0]
+                rows = get_repair_summary_ecomm_orders(since=since, limit=limit, run_id=run_id)
                 write_json(self, 200, {"ok": True, "rows": rows})
             except Exception as error:
                 write_json(self, 500, {"ok": False, "error": str(error)})
