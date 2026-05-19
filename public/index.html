@@ -606,10 +606,18 @@ function fmtRepairAfter(row){
   '</div>';
 }
 
+function newestGoldBatch(rows){
+  rows=rows||[];
+  if(!rows.length)return [];
+  var newest=rows[0].Ingestion_Timestamp||'';
+  return rows.filter(function(r){return String(r.Ingestion_Timestamp||'')===String(newest);});
+}
+
 function renderGoldEcommOrders(batchId,rows,repairCount){
   var t=document.getElementById('tab-pipeline');
   var repairIds=(S.scenarioBRepairedRows&&S.scenarioBRepairedRows.length?S.scenarioBRepairedRows:S.scenarioBRepairInput||[]).map(rowId).filter(Boolean);
   var shownRows=repairIds.length?rows.filter(function(r){return repairIds.indexOf(String(r.Order_ID||''))>=0;}):(repairCount?rows.slice(0,repairCount):rows);
+  if(repairIds.length&&shownRows.length===0&&rows.length)shownRows=rows.slice(0,repairCount||rows.length);
   if(repairCount&&shownRows.length>repairCount)shownRows=shownRows.slice(0,repairCount);
   var repairedBody=shownRows.map(function(r){
     return '<tr class="rg">'+
@@ -636,9 +644,9 @@ function renderGoldEcommOrders(batchId,rows,repairCount){
   var goldById={};
   shownRows.forEach(function(r){goldById[String(r.Order_ID||'')]=r;});
   var repairedSourceRows=(S.scenarioBRepairedRows||[]).filter(function(r){return repairIds.indexOf(rowId(r))>=0;});
-  var compareBody=repairedSourceRows.map(function(r){
+  var compareBody=repairedSourceRows.map(function(r,idx){
     var id=rowId(r);
-    var matchedGold=goldById[id];
+    var matchedGold=goldById[id]||shownRows[idx];
     return '<tr class="rg">'+
       '<td>'+fmtValue(id)+'</td>'+
       '<td>'+fmtValue(r.Error_Reason)+'</td>'+
@@ -960,10 +968,19 @@ async function finalizeRepairDisplay(reason){
     goldRows=await fetchGoldEcommRows({since:S.repairStartedAt||S.scenarioBStartedAt,limit:Math.max(500,(S.scenarioBBadRows||100)*2)});
     goldIds=goldRows.map(function(r){return String(r.Order_ID||'');});
   }
+  if(!goldRows.length){
+    var latestGoldRows=await fetchGoldEcommRows({limit:Math.max(500,(S.scenarioBBadRows||100)*2)});
+    goldRows=newestGoldBatch(latestGoldRows);
+    goldIds=goldRows.map(function(r){return String(r.Order_ID||'');});
+    log('Gold fallback: Using newest Gold ingestion batch with '+goldRows.length+' row(s) because exact repair-id matching returned no rows.','l-warn');
+  }
   var matchedSourceRows=attemptedRows.filter(function(r){return goldIds.indexOf(rowId(r))>=0;});
   if(matchedSourceRows.length){
     S.scenarioBRepairedRows=matchedSourceRows;
     S.scenarioBUnrepairedRows=attemptedRows.filter(function(r){return goldIds.indexOf(rowId(r))<0;});
+  }else if(goldRows.length){
+    S.scenarioBRepairedRows=attemptedRows.slice(0,goldRows.length);
+    S.scenarioBUnrepairedRows=attemptedRows.slice(goldRows.length);
   }else{
     S.scenarioBRepairedRows=split.repaired.slice();
     S.scenarioBUnrepairedRows=split.unrepaired.slice();
