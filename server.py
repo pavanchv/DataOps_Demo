@@ -390,7 +390,11 @@ GROUP BY Run_ID
 SET NOCOUNT ON;
 SELECT TOP {safe_int(limit, 10)}
   Order_ID,
+  Transaction_Date,
+  Product,
+  Quantity,
   Price,
+  Total_Amount,
   Error_Reason,
   Quarantine_Timestamp,
   Run_ID,
