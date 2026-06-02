@@ -194,12 +194,13 @@ html,body{height:100%;min-height:100%;background:var(--color-page-bg);overflow:h
 .rule-msg{font-size:11px;color:var(--color-text-secondary);margin-top:8px}
 .compare-cell{font-size:12px;line-height:1.45;color:var(--color-text)}
 .compare-cell .muted{display:block;color:var(--color-text-muted);font-size:11px;margin-top:2px}
-.ai-review-layout{display:grid;grid-template-columns:1fr;gap:12px;align-items:stretch;margin-top:12px}
+.ai-fixed-layout{height:calc(100vh - 330px);min-height:520px;display:flex;flex-direction:column;gap:12px;overflow:hidden}
+.ai-review-layout{display:flex;flex-direction:column;gap:12px;align-items:stretch;min-height:0;flex:1;overflow:hidden}
 .ai-record-panel{border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-surface);overflow:hidden;display:flex;flex-direction:column;min-height:0}
 .ai-record-head{padding:10px 12px;border-bottom:1px solid var(--color-border);background:var(--color-surface-alt);font-size:12px;font-weight:800;color:var(--color-text)}
-.ai-record-scroll{height:clamp(240px,calc(100vh - 560px),360px);overflow:auto;flex:1}
+.ai-record-scroll{overflow:auto;flex:1;min-height:0}
 .ai-record-scroll .tbl th{position:sticky;top:0;z-index:1}
-.ai-bottom-grid{display:grid;grid-template-columns:minmax(360px,.7fr) minmax(480px,1.3fr);gap:12px;align-items:start}
+.ai-bottom-grid{display:grid;grid-template-columns:minmax(360px,.7fr) minmax(480px,1.3fr);gap:12px;align-items:stretch;flex-shrink:0}
 .ai-side-panel{display:flex;flex-direction:column;gap:12px}
 .ai-live-status{margin-bottom:12px}
 .rules-panel.compact .rule-grid{grid-template-columns:repeat(5,1fr)}
@@ -276,8 +277,9 @@ html,body{height:100%;min-height:100%;background:var(--color-page-bg);overflow:h
   .repair-summary{grid-template-columns:1fr}
   .meta-strip{grid-template-columns:1fr}
   .rule-grid{grid-template-columns:1fr}
-  .ai-review-layout{grid-template-columns:1fr}
-  .ai-record-scroll{height:300px}
+  .ai-fixed-layout{height:auto;min-height:0;overflow:visible}
+  .ai-review-layout{overflow:visible}
+  .ai-record-scroll{height:300px;flex:none}
   .repair-table-scroll{max-height:240px}
   .ai-bottom-grid{grid-template-columns:1fr}
   .rules-panel.compact .rule-grid{grid-template-columns:1fr}
@@ -948,7 +950,8 @@ function renderScenarioBAITab(rows){
   var runId=rows[0]&&rows[0].Run_ID?rows[0].Run_ID:'current run';
   var notRepairable=Math.max(0,(S.scenarioBBadRows||0)-rows.length);
   log('AI engine: '+rows.length+' repairable quarantine record(s) found for Run ID '+fmtValue(runId)+'.','l-ai');
-  t.innerHTML='<div class="alert ai-a fade-up">AI engine activated. '+(S.scenarioBBadRows||rows.length)+' bad record(s) were detected. Review the quarantined records and approve repair.</div>'+
+  t.innerHTML='<div class="ai-fixed-layout">'+
+    '<div class="alert ai-a fade-up">AI engine activated. '+(S.scenarioBBadRows||rows.length)+' bad record(s) were detected. Review the quarantined records and approve repair.</div>'+
     (notRepairable>0?'<div class="alert aw fade-up">'+notRepairable+' bad record(s) were detected by Quality Gate but were not returned in the repairable quarantine set. Repair logic for those records is not available in this demo flow.</div>':'')+
     '<div class="ai-review-layout fade-up">'+
       '<div class="ai-record-panel">'+
@@ -968,7 +971,8 @@ function renderScenarioBAITab(rows){
         '</div>'+
         renderRulesUsedPanel()+
       '</div>'+
-    '</div>';
+    '</div>'+
+  '</div>';
 }
 
 function captureRuleRequest(){
