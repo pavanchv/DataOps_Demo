@@ -354,7 +354,7 @@ html,body{height:100%;min-height:100%;background:var(--color-page-bg);overflow:h
 </div>
 
 <script>
-var S={goldRecs:[],quarRecs:[],aiRecs:[],batches:0,running:false,decisions:{},speedMult:1,scenarioBStartedAt:null,scenarioBRunId:null,scenarioBBadRows:0,scenarioBCleanRows:0,scenarioBAllRows:[],scenarioBRepairInput:[],scenarioBRepairedRows:[],scenarioBUnrepairedRows:[],scenarioBRepairedCount:0,goldBadgeOverride:null};
+var S={goldRecs:[],quarRecs:[],aiRecs:[],batches:0,running:false,decisions:{},speedMult:1,scenarioBStartedAt:null,scenarioBRunId:null,scenarioBBadRows:0,scenarioBCleanRows:0,scenarioBAllRows:[],scenarioBRepairInput:[],scenarioBRepairedRows:[],scenarioBUnrepairedRows:[],scenarioBRepairedCount:0,goldBadgeOverride:null,quarantineBadgeOverride:null};
 var PIPELINES={scenarioB:'8063e804-d6de-4b8a-a750-e9357fc5dd18',repair:'971b2c65-c4d8-4044-90ad-a0daecc48836'};
 var POWERBI_REPORT_URL='https://app.powerbi.com/reportEmbed?reportId=0e376b19-db43-4f50-b715-6bc8f1e56565&autoAuth=true&ctid=2808f13e-3eee-4625-a70c-f4c8dab8aa28';
 var logLines=[];
@@ -401,7 +401,8 @@ function updateBadges(){
   document.getElementById('tb-gold').textContent='Gold: '+(S.goldBadgeOverride!==null?S.goldBadgeOverride:S.goldRecs.length);
   document.getElementById('tb-batches').textContent='Batches: '+S.batches;
   document.getElementById('tb-ai').textContent='AI-cleaned: '+Math.max(S.aiRecs.length,S.scenarioBRepairedCount||0);
-  document.getElementById('tb-quar').textContent='Quarantined: '+S.quarRecs.length;
+  var quarantineCount=S.quarantineBadgeOverride!==null&&S.quarantineBadgeOverride!==undefined?S.quarantineBadgeOverride:S.quarRecs.length;
+  document.getElementById('tb-quar').textContent='Quarantined: '+quarantineCount;
 }
 
 function rowId(r){return String((r&&(r.Order_ID||r.OrderId||r.id))||'');}
@@ -413,6 +414,7 @@ function isRepairedRow(r){
 function splitRepairRows(rows){
   rows=rows||[];
   S.scenarioBAllRows=rows.slice();
+  S.quarantineBadgeOverride=rows.length;
   S.scenarioBRepairedRows=rows.filter(isRepairedRow);
   S.scenarioBUnrepairedRows=rows.filter(function(r){return !isRepairedRow(r);});
   S.scenarioBRepairInput=S.scenarioBUnrepairedRows.slice();
@@ -582,6 +584,7 @@ async function loadGoldWebsiteOrders(batchId){
   if(!response.ok||!data.ok)throw new Error(data.error||'Unable to fetch Gold records');
   var rows=data.rows||[];
   S.goldRecs=rows;
+  S.quarantineBadgeOverride=null;
   updateBadges();
   renderGoldWebsiteOrders(batchId,rows);
   uiLog('Rendered Scenario A Gold table');
@@ -827,6 +830,7 @@ async function loadQuarantineOrders(options){
   if(!response.ok||!data.ok)throw new Error(data.error||'Unable to fetch quarantine records');
   var rows=data.rows||[];
   S.quarRecs=rows;
+  S.quarantineBadgeOverride=rows.length;
   updateBadges();
   log('Quarantine: Loaded '+rows.length+' '+label+' from dbo.quarantine_ecomm_orders','l-warn');
   return rows;
@@ -1352,7 +1356,7 @@ renderPowerBIReport();
 async function liveScenarioA(){
   var records=CLEAN;S.batches++;var batchId='LIVE-'+(4820+S.batches);
   uiLog('Scenario A button clicked');
-  S.goldRecs=[];S.quarRecs=[];S.aiRecs=[];S.decisions={};S.scenarioBStartedAt=null;S.scenarioBRunId=null;S.scenarioBBadRows=0;S.scenarioBCleanRows=0;S.scenarioBAllRows=[];S.scenarioBRepairInput=[];S.scenarioBRepairedRows=[];S.scenarioBUnrepairedRows=[];S.scenarioBRepairedCount=0;S.goldBadgeOverride=null;updateBadges();
+  S.goldRecs=[];S.quarRecs=[];S.aiRecs=[];S.decisions={};S.scenarioBStartedAt=null;S.scenarioBRunId=null;S.scenarioBBadRows=0;S.scenarioBCleanRows=0;S.scenarioBAllRows=[];S.scenarioBRepairInput=[];S.scenarioBRepairedRows=[];S.scenarioBUnrepairedRows=[];S.scenarioBRepairedCount=0;S.goldBadgeOverride=null;S.quarantineBadgeOverride=null;updateBadges();
   uiLog('Cleared previous scenario state');
   document.getElementById('tab-quality').innerHTML='<div class="alert ab fade-up">Scenario A is running. Latest website quality gate result will load after completion.</div>';
   document.getElementById('tab-ai').innerHTML='<div class="alert ab fade-up">Scenario A is running. AI repair check will appear after the pipeline completes.</div>';
@@ -1455,7 +1459,7 @@ async function liveScenarioB(){
   var batchId='LIVE-B-'+(4820+(++S.batches));
   var runStartedAt=new Date(Date.now()-120000).toISOString();
   uiLog('Scenario B button clicked');
-  S.goldRecs=[];S.quarRecs=[];S.aiRecs=[];S.decisions={};S.scenarioBStartedAt=runStartedAt;S.scenarioBRunId=null;S.scenarioBBadRows=0;S.scenarioBCleanRows=0;S.scenarioBAllRows=[];S.scenarioBRepairInput=[];S.scenarioBRepairedRows=[];S.scenarioBUnrepairedRows=[];S.scenarioBRepairedCount=0;S.goldBadgeOverride=null;updateBadges();
+  S.goldRecs=[];S.quarRecs=[];S.aiRecs=[];S.decisions={};S.scenarioBStartedAt=runStartedAt;S.scenarioBRunId=null;S.scenarioBBadRows=0;S.scenarioBCleanRows=0;S.scenarioBAllRows=[];S.scenarioBRepairInput=[];S.scenarioBRepairedRows=[];S.scenarioBUnrepairedRows=[];S.scenarioBRepairedCount=0;S.goldBadgeOverride=null;S.quarantineBadgeOverride=null;updateBadges();
   uiLog('Cleared previous Scenario A data from UI state');
   log('--- Scenario B: Starting real Fabric mixed-data pipeline '+batchId+' ---','l-warn');
   setSysDot('run');setSysStatus('Starting Scenario B Fabric pipeline...');
@@ -1518,6 +1522,8 @@ async function pollScenarioB(batchId,jobInstanceId,retryAfter,runStartedAt){
       S.scenarioBCleanRows=qualityResult?Number(qualityResult.Clean_Rows||0):0;
       S.goldBadgeOverride=S.scenarioBCleanRows;
       S.scenarioBBadRows=expectedBad;
+      S.quarantineBadgeOverride=expectedBad>0?expectedBad:null;
+      updateBadges();
       var rows=await loadQuarantineOrders({since:runStartedAt,limit:Math.max(expectedBad||10,50),activeOnly:false,runId:'latest'});
       if(expectedBad>0&&rows.length===0){
         log('Scenario B quarantine: current-run timestamp filter returned 0 rows. Retrying latest quarantine batch without timestamp filter...','l-warn');
@@ -1540,6 +1546,8 @@ async function pollScenarioB(batchId,jobInstanceId,retryAfter,runStartedAt){
       }else{
         if(expectedBad>0){
           sn('gate','warn');sn('ai','warn');setProgress(86);
+          S.quarantineBadgeOverride=expectedBad;
+          updateBadges();
           document.getElementById('tab-pipeline').innerHTML='<span class="scenario-pill sp-mixed">Scenario B - mixed data batch</span>'+
             '<div class="alert af fade-up">Quality Gate detected '+expectedBad+' bad record(s). Open the Quality Gate tab to review the validation result.</div>'+
             '<div class="alert aw fade-up">No matching quarantine records were returned to the website yet. This can happen if Fabric has not finished exposing the quarantine rows or the query filter did not match the latest Run ID. Check the AI Engine tab once quarantine records load.</div>';
