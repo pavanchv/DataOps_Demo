@@ -931,7 +931,10 @@ function renderAITab(quarRecs,phase){
 function renderScenarioBAITab(rows){
   var t=document.getElementById('tab-ai');
   if(!rows||rows.length===0){
-    t.innerHTML='<div class="alert ak fade-up">Scenario B completed with no current quarantine rows returned.</div>';
+    var bad=S.scenarioBBadRows||0;
+    t.innerHTML=bad>0
+      ? '<div class="alert aw fade-up">Quality Gate found '+bad+' bad record(s), but quarantine rows are not available in the website yet. Check the Quality Gate tab and retry after Fabric refreshes the quarantine table.</div>'
+      : '<div class="center-state"><div class="center-state-icon">&#10003;</div><div class="center-state-title">No repair action needed</div><div class="center-state-text">Scenario B completed without bad records for this run.</div></div>';
     return;
   }
   var body=rows.map(function(r){
@@ -1516,6 +1519,10 @@ async function pollScenarioB(batchId,jobInstanceId,retryAfter,runStartedAt){
       S.goldBadgeOverride=S.scenarioBCleanRows;
       S.scenarioBBadRows=expectedBad;
       var rows=await loadQuarantineOrders({since:runStartedAt,limit:Math.max(expectedBad||10,50),activeOnly:false,runId:'latest'});
+      if(expectedBad>0&&rows.length===0){
+        log('Scenario B quarantine: current-run timestamp filter returned 0 rows. Retrying latest quarantine batch without timestamp filter...','l-warn');
+        rows=await loadQuarantineOrders({limit:Math.max(expectedBad||10,50),activeOnly:false,runId:'latest'});
+      }
       if(rows.length>0){
         var runId=rows[0]&&rows[0].Run_ID?rows[0].Run_ID:'current run';
         S.scenarioBRunId=runId==='current run'?null:runId;
@@ -1531,9 +1538,20 @@ async function pollScenarioB(batchId,jobInstanceId,retryAfter,runStartedAt){
         switchTab('ai');
         setSysStatus('Bad data found - AI engine waiting');
       }else{
-        sn('gate','ok');sn('gold','ok');sn('pbi','ok');setProgress(100);
-        document.getElementById('tab-pipeline').innerHTML='<div class="alert ak fade-up">Scenario B completed. No quarantine rows were returned.</div>';
-        setSysStatus('Scenario B completed - no quarantine rows');
+        if(expectedBad>0){
+          sn('gate','warn');sn('ai','warn');setProgress(86);
+          document.getElementById('tab-pipeline').innerHTML='<span class="scenario-pill sp-mixed">Scenario B - mixed data batch</span>'+
+            '<div class="alert af fade-up">Quality Gate detected '+expectedBad+' bad record(s). Open the Quality Gate tab to review the validation result.</div>'+
+            '<div class="alert aw fade-up">No matching quarantine records were returned to the website yet. This can happen if Fabric has not finished exposing the quarantine rows or the query filter did not match the latest Run ID. Check the AI Engine tab once quarantine records load.</div>';
+          document.getElementById('tab-ai').innerHTML='<div class="alert aw fade-up">Quality Gate found '+expectedBad+' bad record(s), but no quarantine records were returned to the website for this run yet. Please verify the latest Run ID/quarantine table refresh, then run repair after the rows appear.</div>';
+          setSysStatus('Bad data found - quarantine rows not loaded');
+          log('Scenario B warning: Quality Gate found '+expectedBad+' bad row(s), but quarantine query returned 0 rows.','l-warn');
+        }else{
+          sn('gate','ok');sn('gold','ok');sn('pbi','ok');setProgress(100);
+          document.getElementById('tab-pipeline').innerHTML='<div class="alert ak fade-up">Scenario B completed. No bad records were found, so no quarantine action is required.</div>';
+          document.getElementById('tab-ai').innerHTML='<div class="center-state"><div class="center-state-icon">&#10003;</div><div class="center-state-title">No repair action needed</div><div class="center-state-text">Scenario B completed without bad records for this run.</div></div>';
+          setSysStatus('Scenario B completed - no bad rows');
+        }
       }
       return;
     }else if(status==='Failed'||status==='Cancelled'||status==='Canceled'){
